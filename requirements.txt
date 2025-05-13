@@ -6,4 +6,7 @@ tqdm==4.66.1
 flask==2.3.3
 waitress==2.1.2
 pytest==7.4.0
-pytest-cov==4.1.0 
+pytest-cov==4.1.0
+opencv-python==4.8.0.74
+numpy==1.24.3
+uuid==1.30 

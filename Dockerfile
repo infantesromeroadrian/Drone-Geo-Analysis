@@ -5,11 +5,16 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV DISPLAY=host.docker.internal:0.0
 
-# Install system dependencies for Tkinter GUI
+# Install system dependencies for Tkinter GUI and OpenCV
 RUN apt-get update && apt-get install -y \
     xvfb \
     tk \
     python3-tk \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgl1-mesa-glx \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

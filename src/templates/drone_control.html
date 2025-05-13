@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Drones y Análisis Geoespacial</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+        
+        header h1 {
+            color: white;
+            margin: 0;
+        }
+        
+        .main-container {
+            display: flex;
+            height: calc(100vh - 120px);
+        }
+        
+        .side-panel {
+            width: 320px;
+            background-color: white;
+            padding: 15px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            overflow-y: auto;
+        }
+        
+        .content-panel {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .map-container {
+            flex: 2;
+            position: relative;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+            border-radius: 5px;
+        }
+        
+        .video-container {
+            flex: 1;
+            position: relative;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+            background-color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #video-stream {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        
+        .control-section {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .control-section h3 {
+            color: #2c3e50;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        
+        button, .button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+        
+        button.danger {
+            background-color: #e74c3c;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        button.danger:hover {
+            background-color: #c0392b;
+        }
+        
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        .form-group {
+            margin-bottom: 10px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .telemetry-data {
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        
+        .telemetry-data table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .telemetry-data td {
+            padding: 4px;
+        }
+        
+        .telemetry-data td:first-child {
+            font-weight: bold;
+            width: 40%;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-disconnected {
+            background-color: #e74c3c;
+        }
+        
+        .status-connected {
+            background-color: #2ecc71;
+        }
+        
+        .mission-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        
+        .mission-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        
+        .mission-item:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .mission-item.active {
+            background-color: #e0f7fa;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 15px;
+        }
+        
+        .tab {
+            padding: 8px 15px;
+            cursor: pointer;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            margin-right: 5px;
+        }
+        
+        .tab.active {
+            background: white;
+            border-bottom: 1px solid white;
+            margin-bottom: -1px;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 10px;
+            color: #7f8c8d;
+            font-size: 0.9em;
+            background-color: #2c3e50;
+            color: white;
+        }
+        
+        /* Animación de carga */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Control de Drones y Análisis Geoespacial</h1>
+    </header>
+
+    <div class="main-container">
+        <div class="side-panel">
+            <div class="control-section">
+                <h3>Estado del Dron</h3>
+                <div>
+                    <span class="status-indicator status-disconnected" id="drone-status-indicator"></span>
+                    <span id="drone-status-text">Desconectado</span>
+                </div>
+                <div class="telemetry-data" id="telemetry-container">
+                    <table>
+                        <tr>
+                            <td>Batería:</td>
+                            <td id="battery-level">-</td>
+                        </tr>
+                        <tr>
+                            <td>Altitud:</td>
+                            <td id="altitude">-</td>
+                        </tr>
+                        <tr>
+                            <td>Velocidad:</td>
+                            <td id="speed">-</td>
+                        </tr>
+                        <tr>
+                            <td>GPS:</td>
+                            <td id="gps-coords">-</td>
+                        </tr>
+                        <tr>
+                            <td>Señal:</td>
+                            <td id="signal-strength">-</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h3>Control del Dron</h3>
+                <div>
+                    <button id="connect-btn">Conectar</button>
+                    <button id="disconnect-btn" disabled>Desconectar</button>
+                </div>
+                <div style="margin-top: 10px;">
+                    <button id="takeoff-btn" disabled>Despegar</button>
+                    <button id="land-btn" class="danger" disabled>Aterrizar</button>
+                </div>
+                <div style="margin-top: 10px;">
+                    <button id="start-stream-btn" disabled>Iniciar Video</button>
+                    <button id="stop-stream-btn" disabled>Detener Video</button>
+                </div>
+                <div style="margin-top: 10px;">
+                    <button id="capture-image-btn" disabled>Capturar Imagen</button>
+                    <button id="analyze-image-btn" disabled>Analizar Imagen</button>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <div class="tabs">
+                    <div class="tab active" data-tab="missions">Misiones</div>
+                    <div class="tab" data-tab="geo">Geolocalización</div>
+                    <div class="tab" data-tab="image-analysis">Análisis de Imágenes</div>
+                </div>
+                
+                <div class="tab-content active" id="missions-tab">
+                    <h3>Misiones</h3>
+                    <div>
+                        <button id="create-mission-btn">Nueva Misión</button>
+                        <button id="load-mission-btn">Cargar Misión</button>
+                    </div>
+                    <div class="mission-list" id="mission-list">
+                        <div class="mission-item">No hay misiones disponibles</div>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <button id="start-mission-btn" disabled>Iniciar Misión</button>
+                        <button id="stop-mission-btn" class="danger" disabled>Abortar Misión</button>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="geo-tab">
+                    <h3>Análisis Geoespacial</h3>
+                    <div class="form-group">
+                        <label for="detection-mode">Modo de detección:</label>
+                        <select id="detection-mode">
+                            <option value="changes">Detección de cambios</option>
+                            <option value="correlation">Correlación satelital</option>
+                            <option value="triangulation">Triangulación</option>
+                        </select>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <button id="add-reference-btn">Agregar referencia</button>
+                        <button id="detect-changes-btn">Detectar cambios</button>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <button id="create-target-btn">Crear objetivo</button>
+                        <button id="calculate-position-btn">Calcular posición</button>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="image-analysis-tab">
+                    <h3>Análisis de Ubicación</h3>
+                    <div class="form-group">
+                        <label for="image-input">Seleccionar imagen:</label>
+                        <input type="file" id="image-input" accept="image/*">
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <div id="image-preview" style="max-width: 100%; height: 150px; background-color: #f5f5f5; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; overflow: hidden;">
+                            <p>Vista previa de imagen</p>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <button id="analyze-location-btn">Analizar Ubicación</button>
+                    </div>
+                    <div id="analysis-results" style="margin-top: 15px; max-height: 200px; overflow-y: auto; background-color: #f9f9f9; padding: 10px; border-radius: 4px; display: none;">
+                        <h4>Resultados:</h4>
+                        <div id="results-content"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-panel">
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
+            <div class="video-container">
+                <img id="video-stream" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" alt="Stream de video no disponible">
+                <div id="video-overlay"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Drone-Geo-Analysis - Herramienta militar de análisis geográfico y control de drones</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar el mapa
+            const map = L.map('map').setView([40.416775, -3.703790], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            
+            // Marcador para el dron (inicialmente invisible)
+            const droneMarker = L.marker([0, 0], {
+                icon: L.divIcon({
+                    className: 'drone-marker',
+                    html: '🛸',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                })
+            });
+            
+            // Variables globales
+            let connected = false;
+            let streaming = false;
+            let activeTab = 'missions';
+            let activeMission = null;
+            let telemetryInterval = null;
+            
+            // Elementos del DOM
+            const connectBtn = document.getElementById('connect-btn');
+            const disconnectBtn = document.getElementById('disconnect-btn');
+            const takeoffBtn = document.getElementById('takeoff-btn');
+            const landBtn = document.getElementById('land-btn');
+            const startStreamBtn = document.getElementById('start-stream-btn');
+            const stopStreamBtn = document.getElementById('stop-stream-btn');
+            const captureImageBtn = document.getElementById('capture-image-btn');
+            const analyzeImageBtn = document.getElementById('analyze-image-btn');
+            const droneStatusIndicator = document.getElementById('drone-status-indicator');
+            const droneStatusText = document.getElementById('drone-status-text');
+            const batteryLevel = document.getElementById('battery-level');
+            const altitude = document.getElementById('altitude');
+            const speed = document.getElementById('speed');
+            const gpsCoords = document.getElementById('gps-coords');
+            const signalStrength = document.getElementById('signal-strength');
+            const videoStream = document.getElementById('video-stream');
+            
+            // Eventos para pestañas
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const tabName = this.getAttribute('data-tab');
+                    switchTab(tabName);
+                });
+            });
+            
+            // Eventos para botones de control
+            connectBtn.addEventListener('click', connectDrone);
+            disconnectBtn.addEventListener('click', disconnectDrone);
+            takeoffBtn.addEventListener('click', takeoffDrone);
+            landBtn.addEventListener('click', landDrone);
+            startStreamBtn.addEventListener('click', startVideoStream);
+            stopStreamBtn.addEventListener('click', stopVideoStream);
+            
+            // Misiones
+            document.getElementById('create-mission-btn').addEventListener('click', createMission);
+            document.getElementById('load-mission-btn').addEventListener('click', loadMissions);
+            document.getElementById('start-mission-btn').addEventListener('click', startMission);
+            document.getElementById('stop-mission-btn').addEventListener('click', stopMission);
+            
+            // Análisis geo
+            document.getElementById('add-reference-btn').addEventListener('click', addReference);
+            document.getElementById('detect-changes-btn').addEventListener('click', detectChanges);
+            document.getElementById('create-target-btn').addEventListener('click', createTarget);
+            document.getElementById('calculate-position-btn').addEventListener('click', calculatePosition);
+            
+            // Análisis de Imágenes
+            const imageInput = document.getElementById('image-input');
+            const imagePreview = document.getElementById('image-preview');
+            const analyzeLocationBtn = document.getElementById('analyze-location-btn');
+            const analysisResults = document.getElementById('analysis-results');
+            const resultsContent = document.getElementById('results-content');
+            
+            // Manejar la carga de imágenes para la pestaña de análisis
+            imageInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                // Mostrar vista previa
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    imagePreview.innerHTML = '';
+                    const img = document.createElement('img');
+                    img.src = evt.target.result;
+                    img.style.maxHeight = '100%';
+                    img.style.maxWidth = '100%';
+                    imagePreview.appendChild(img);
+                    
+                    // Habilitar botón de análisis
+                    analyzeLocationBtn.disabled = false;
+                };
+                reader.readAsDataURL(file);
+                
+                // Ocultar resultados anteriores
+                analysisResults.style.display = 'none';
+            });
+            
+            // Analizar ubicación usando la API de análisis
+            analyzeLocationBtn.addEventListener('click', function() {
+                if (!imageInput.files[0]) {
+                    alert('Por favor seleccione una imagen primero');
+                    return;
+                }
+                
+                // Mostrar loader
+                analyzeLocationBtn.disabled = true;
+                resultsContent.innerHTML = '<div class="loader"></div> Analizando imagen...';
+                analysisResults.style.display = 'block';
+                
+                // Crear FormData para enviar la imagen
+                const formData = new FormData();
+                formData.append('image', imageInput.files[0]);
+                
+                // Enviar solicitud a la API
+                fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Mostrar resultados
+                    if (data.error) {
+                        resultsContent.innerHTML = `<div class="error">Error: ${data.error}</div>`;
+                    } else {
+                        // Formatear resultados
+                        let html = `
+                            <div><strong>País:</strong> ${data.results.country || 'No determinado'}</div>
+                            <div><strong>Ciudad:</strong> ${data.results.city || 'No determinada'}</div>
+                            <div><strong>Distrito:</strong> ${data.results.district || 'No determinado'}</div>
+                            <div><strong>Barrio:</strong> ${data.results.neighborhood || 'No determinado'}</div>
+                            <div><strong>Calle:</strong> ${data.results.street || 'No determinada'}</div>
+                            <div><strong>Confianza:</strong> ${data.results.confidence || 0}%</div>
+                        `;
+                        
+                        if (data.results.supporting_evidence && data.results.supporting_evidence.length > 0) {
+                            html += '<div><strong>Evidencia:</strong><ul>';
+                            data.results.supporting_evidence.forEach(evidence => {
+                                html += `<li>${evidence}</li>`;
+                            });
+                            html += '</ul></div>';
+                        }
+                        
+                        resultsContent.innerHTML = html;
+                    }
+                    analyzeLocationBtn.disabled = false;
+                })
+                .catch(error => {
+                    resultsContent.innerHTML = `<div class="error">Error de conexión: ${error.message}</div>`;
+                    analyzeLocationBtn.disabled = false;
+                });
+            });
+            
+            // Funciones de control de drone
+            function connectDrone() {
+                // Simular conexión con el dron
+                fetch('/api/drone/connect', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        connected = true;
+                        updateDroneStatus(true);
+                        startTelemetryUpdates();
+                        
+                        // Actualizar mapa con la posición inicial
+                        updateDronePosition(data.position);
+                    } else {
+                        alert('Error al conectar con el dron: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error de conexión con el servidor');
+                });
+            }
+            
+            function disconnectDrone() {
+                fetch('/api/drone/disconnect', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        connected = false;
+                        updateDroneStatus(false);
+                        stopTelemetryUpdates();
+                        
+                        // Quitar marcador del mapa
+                        if (map.hasLayer(droneMarker)) {
+                            map.removeLayer(droneMarker);
+                        }
+                    } else {
+                        alert('Error al desconectar del dron: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+            
+            function takeoffDrone() {
+                const altitude = prompt('Ingrese altitud de despegue (metros):', '10');
+                if (altitude === null) return;
+                
+                fetch('/api/drone/takeoff', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ altitude: parseFloat(altitude) })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        alert('Error en despegue: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+            
+            function landDrone() {
+                if (confirm('¿Está seguro que desea aterrizar el dron?')) {
+                    fetch('/api/drone/land', {
+                        method: 'POST'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data.success) {
+                            alert('Error en aterrizaje: ' + data.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+                }
+            }
+            
+            function startVideoStream() {
+                fetch('/api/drone/stream/start', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        streaming = true;
+                        updateStreamingStatus(true);
+                        startFrameUpdates();
+                    } else {
+                        alert('Error al iniciar stream: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+            
+            function stopVideoStream() {
+                fetch('/api/drone/stream/stop', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        streaming = false;
+                        updateStreamingStatus(false);
+                        stopFrameUpdates();
+                    } else {
+                        alert('Error al detener stream: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+            
+            // Funciones de misiones
+            function createMission() {
+                const name = prompt('Nombre de la misión:', 'Nueva Misión');
+                if (!name) return;
+                
+                alert('Se abrirá el editor de misiones. Seleccione puntos en el mapa para crear waypoints.');
+                // Aquí se implementaría la lógica para añadir waypoints en el mapa
+            }
+            
+            function loadMissions() {
+                fetch('/api/missions')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateMissionList(data.missions);
+                    } else {
+                        alert('Error al cargar misiones: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+            
+            function startMission() {
+                if (!activeMission) {
+                    alert('Debe seleccionar una misión primero');
+                    return;
+                }
+                
+                fetch('/api/missions/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ id: activeMission })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        alert('Error al iniciar misión: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+            
+            function stopMission() {
+                fetch('/api/missions/abort', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        alert('Error al abortar misión: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+            
+            // Funciones de geolocalización
+            function addReference() {
+                const mode = document.getElementById('detection-mode').value;
+                
+                if (mode === 'changes') {
+                    // Capturar imagen como referencia
+                    fetch('/api/geo/reference/add', {
+                        method: 'POST'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Imagen de referencia añadida con éxito. ID: ' + data.reference_id);
+                        } else {
+                            alert('Error al añadir referencia: ' + data.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+                }
+            }
+            
+            function detectChanges() {
+                fetch('/api/geo/changes/detect', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (data.has_changes) {
+                            alert(`Se detectaron cambios: ${data.change_percentage.toFixed(2)}% modificado`);
+                            // Aquí se mostraría la imagen con cambios resaltados
+                        } else {
+                            alert('No se detectaron cambios significativos');
+                        }
+                    } else {
+                        alert('Error en detección: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+            
+            function createTarget() {
+                fetch('/api/geo/target/create', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Objetivo creado. ID: ' + data.target_id);
+                    } else {
+                        alert('Error al crear objetivo: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+            
+            function calculatePosition() {
+                const targetId = prompt('ID del objetivo a triangular:');
+                if (!targetId) return;
+                
+                fetch('/api/geo/position/calculate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ target_id: targetId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`Posición calculada:\nLatitud: ${data.position.latitude}\nLongitud: ${data.position.longitude}\nPrecisión: ${data.precision.confidence}%`);
+                        // Añadir marcador en el mapa
+                        L.marker([data.position.latitude, data.position.longitude])
+                            .addTo(map)
+                            .bindPopup(`Objetivo: ${targetId}<br>Precisión: ${data.precision.confidence}%`);
+                    } else {
+                        alert('Error al calcular posición: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+            
+            // Funciones de utilidad
+            function switchTab(tabName) {
+                // Desactivar todas las pestañas
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                
+                // Activar pestaña seleccionada
+                document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add('active');
+                document.getElementById(`${tabName}-tab`).classList.add('active');
+                
+                activeTab = tabName;
+            }
+            
+            function updateDroneStatus(isConnected) {
+                if (isConnected) {
+                    droneStatusIndicator.classList.remove('status-disconnected');
+                    droneStatusIndicator.classList.add('status-connected');
+                    droneStatusText.textContent = 'Conectado';
+                    
+                    // Habilitar controles
+                    connectBtn.disabled = true;
+                    disconnectBtn.disabled = false;
+                    takeoffBtn.disabled = false;
+                    landBtn.disabled = false;
+                    startStreamBtn.disabled = false;
+                    captureImageBtn.disabled = false;
+                } else {
+                    droneStatusIndicator.classList.remove('status-connected');
+                    droneStatusIndicator.classList.add('status-disconnected');
+                    droneStatusText.textContent = 'Desconectado';
+                    
+                    // Deshabilitar controles
+                    connectBtn.disabled = false;
+                    disconnectBtn.disabled = true;
+                    takeoffBtn.disabled = true;
+                    landBtn.disabled = true;
+                    startStreamBtn.disabled = true;
+                    stopStreamBtn.disabled = true;
+                    captureImageBtn.disabled = true;
+                    analyzeImageBtn.disabled = true;
+                }
+            }
+            
+            function updateStreamingStatus(isStreaming) {
+                if (isStreaming) {
+                    startStreamBtn.disabled = true;
+                    stopStreamBtn.disabled = false;
+                } else {
+                    startStreamBtn.disabled = !connected;
+                    stopStreamBtn.disabled = true;
+                }
+            }
+            
+            function startTelemetryUpdates() {
+                telemetryInterval = setInterval(() => {
+                    fetch('/api/drone/telemetry')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            updateTelemetryData(data.telemetry);
+                            updateDronePosition(data.telemetry.gps);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching telemetry:', error);
+                    });
+                }, 1000);
+            }
+            
+            function stopTelemetryUpdates() {
+                if (telemetryInterval) {
+                    clearInterval(telemetryInterval);
+                    telemetryInterval = null;
+                }
+            }
+            
+            function updateTelemetryData(telemetry) {
+                batteryLevel.textContent = `${telemetry.battery}%`;
+                altitude.textContent = `${telemetry.altitude.toFixed(1)} m`;
+                speed.textContent = `${telemetry.speed.horizontal.toFixed(1)} m/s`;
+                gpsCoords.textContent = `${telemetry.gps.latitude.toFixed(6)}, ${telemetry.gps.longitude.toFixed(6)}`;
+                signalStrength.textContent = `${telemetry.signal_strength}%`;
+            }
+            
+            function updateDronePosition(position) {
+                const pos = [position.latitude, position.longitude];
+                
+                if (!map.hasLayer(droneMarker)) {
+                    droneMarker.setLatLng(pos);
+                    droneMarker.addTo(map);
+                    map.setView(pos, 18);
+                } else {
+                    droneMarker.setLatLng(pos);
+                }
+            }
+            
+            function startFrameUpdates() {
+                // Implementación pendiente: Actualizar imagen del stream
+            }
+            
+            function stopFrameUpdates() {
+                // Implementación pendiente: Detener actualizaciones
+            }
+            
+            function updateMissionList(missions) {
+                const missionList = document.getElementById('mission-list');
+                
+                if (missions.length === 0) {
+                    missionList.innerHTML = '<div class="mission-item">No hay misiones disponibles</div>';
+                    return;
+                }
+                
+                let html = '';
+                missions.forEach(mission => {
+                    html += `<div class="mission-item" data-id="${mission.id}">${mission.name}</div>`;
+                });
+                
+                missionList.innerHTML = html;
+                
+                // Añadir eventos click
+                document.querySelectorAll('.mission-item').forEach(item => {
+                    item.addEventListener('click', function() {
+                        document.querySelectorAll('.mission-item').forEach(i => {
+                            i.classList.remove('active');
+                        });
+                        this.classList.add('active');
+                        activeMission = this.getAttribute('data-id');
+                        document.getElementById('start-mission-btn').disabled = false;
+                    });
+                });
+            }
+        });
+    </script>
+</body>
+</html> 

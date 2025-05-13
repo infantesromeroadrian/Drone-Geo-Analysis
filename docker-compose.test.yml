@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  drone-geo-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: drone-geo-test
+    volumes:
+      - ./:/app
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    command: python -m pytest 

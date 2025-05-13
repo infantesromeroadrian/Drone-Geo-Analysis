@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis Geográfico OSINT</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 20px;
+            padding-bottom: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+        .file-input {
+            margin-bottom: 20px;
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+        .results-container {
+            display: none;
+        }
+        .evidence-list {
+            padding-left: 20px;
+        }
+        .alternatives-list {
+            margin-top: 10px;
+        }
+        .footer {
+            padding-top: 40px;
+            color: #777;
+            border-top: 1px solid #e5e5e5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="text-center">Análisis Geográfico OSINT</h1>
+            <p class="text-center text-muted">Determina la ubicación geográfica de imágenes mediante análisis de características visuales</p>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="card-title mb-0">Cargar Imagen</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="upload-form" enctype="multipart/form-data">
+                            <div class="mb-3 file-input">
+                                <label for="image-upload" class="form-label">Selecciona una imagen</label>
+                                <input class="form-control" type="file" id="image-upload" name="file" accept=".jpg,.jpeg,.png,.gif,.bmp">
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary" id="analyze-btn">Analizar Imagen</button>
+                            </div>
+                        </form>
+                        
+                        <div class="loading mt-4" id="loading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <p class="mt-2">Analizando imagen... Esto puede tardar hasta 30 segundos.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row results-container" id="results-container">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h3 class="card-title mb-0">Imagen Analizada</h3>
+                    </div>
+                    <div class="card-body text-center">
+                        <img id="preview-image" class="img-fluid" src="" alt="Imagen analizada">
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h3 class="card-title mb-0">Resultados</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info" id="confidence-info">
+                            <strong>Nivel de confianza:</strong> <span id="confidence-value">-</span>%
+                        </div>
+                        
+                        <h4>Ubicación</h4>
+                        <table class="table table-striped">
+                            <tbody>
+                                <tr>
+                                    <th>País</th>
+                                    <td id="country">-</td>
+                                </tr>
+                                <tr>
+                                    <th>Ciudad</th>
+                                    <td id="city">-</td>
+                                </tr>
+                                <tr>
+                                    <th>Distrito</th>
+                                    <td id="district">-</td>
+                                </tr>
+                                <tr>
+                                    <th>Barrio</th>
+                                    <td id="neighborhood">-</td>
+                                </tr>
+                                <tr>
+                                    <th>Calle</th>
+                                    <td id="street">-</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <h4>Evidencia</h4>
+                        <ul class="evidence-list" id="evidence-list">
+                            <li>No hay evidencia disponible</li>
+                        </ul>
+                        
+                        <h4>Posibles alternativas</h4>
+                        <div class="alternatives-list" id="alternatives-list">
+                            <p>No hay alternativas disponibles</p>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <a id="download-results" href="#" class="btn btn-outline-primary">Descargar Resultados</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer text-center">
+            <p>Herramienta de Análisis Geográfico OSINT &copy; 2025</p>
+            <p>Desarrollada para fines de inteligencia y uso militar legítimo.</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadForm = document.getElementById('upload-form');
+            const analyzeBtn = document.getElementById('analyze-btn');
+            const loading = document.getElementById('loading');
+            const resultsContainer = document.getElementById('results-container');
+            const previewImage = document.getElementById('preview-image');
+            const confidenceValue = document.getElementById('confidence-value');
+            const country = document.getElementById('country');
+            const city = document.getElementById('city');
+            const district = document.getElementById('district');
+            const neighborhood = document.getElementById('neighborhood');
+            const street = document.getElementById('street');
+            const evidenceList = document.getElementById('evidence-list');
+            const alternativesList = document.getElementById('alternatives-list');
+            const downloadResults = document.getElementById('download-results');
+            
+            uploadForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const fileInput = document.getElementById('image-upload');
+                if (!fileInput.files.length) {
+                    alert('Por favor, selecciona una imagen primero.');
+                    return;
+                }
+                
+                const file = fileInput.files[0];
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                // Mostrar vista previa de la imagen
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImage.src = e.target.result;
+                }
+                reader.readAsDataURL(file);
+                
+                // Mostrar animación de carga
+                analyzeBtn.disabled = true;
+                loading.style.display = 'block';
+                resultsContainer.style.display = 'none';
+                
+                // Enviar petición al servidor
+                fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error en el servidor');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    
+                    // Mostrar resultados
+                    displayResults(data.results);
+                    
+                    // Actualizar enlace de descarga
+                    if (data.output_file) {
+                        downloadResults.href = `/results/${data.output_file}`;
+                        downloadResults.download = data.output_file;
+                    } else {
+                        downloadResults.style.display = 'none';
+                    }
+                    
+                    // Mostrar contenedor de resultados
+                    resultsContainer.style.display = 'flex';
+                })
+                .catch(error => {
+                    alert('Error: ' + error.message);
+                    console.error('Error:', error);
+                })
+                .finally(() => {
+                    // Ocultar animación de carga
+                    loading.style.display = 'none';
+                    analyzeBtn.disabled = false;
+                });
+            });
+            
+            function displayResults(results) {
+                // Mostrar nivel de confianza
+                confidenceValue.textContent = results.confidence;
+                
+                // Mostrar ubicación
+                country.textContent = results.location.country;
+                city.textContent = results.location.city;
+                district.textContent = results.location.district;
+                neighborhood.textContent = results.location.neighborhood;
+                street.textContent = results.location.street;
+                
+                // Mostrar evidencia
+                if (results.supporting_evidence && results.supporting_evidence.length > 0) {
+                    evidenceList.innerHTML = '';
+                    results.supporting_evidence.forEach(evidence => {
+                        const li = document.createElement('li');
+                        li.textContent = evidence;
+                        evidenceList.appendChild(li);
+                    });
+                } else {
+                    evidenceList.innerHTML = '<li>No hay evidencia disponible</li>';
+                }
+                
+                // Mostrar alternativas
+                if (results.possible_alternatives && results.possible_alternatives.length > 0) {
+                    alternativesList.innerHTML = '';
+                    results.possible_alternatives.forEach(alt => {
+                        const div = document.createElement('div');
+                        div.className = 'alert alert-secondary';
+                        div.innerHTML = `<strong>${alt.country}, ${alt.city}</strong> (Confianza: ${alt.confidence}%)`;
+                        alternativesList.appendChild(div);
+                    });
+                } else {
+                    alternativesList.innerHTML = '<p>No hay alternativas disponibles</p>';
+                }
+            }
+        });
+    </script>
+</body>
+</html> 

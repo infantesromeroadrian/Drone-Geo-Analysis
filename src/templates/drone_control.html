@@ -669,6 +669,31 @@
                                 html = `<div class="warning">${data.results.warning}</div>` + html;
                             }
                             
+                            // Añadir coordenadas si existen
+                            if (data.results.coordinates) {
+                                html += `
+                                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ccc;">
+                                    <div><strong>Coordenadas:</strong></div>
+                                    <div>Latitud: ${data.results.coordinates.latitude || 'No disponible'}</div>
+                                    <div>Longitud: ${data.results.coordinates.longitude || 'No disponible'}</div>
+                                </div>`;
+                                
+                                // Añadir marcador en el mapa si hay coordenadas válidas
+                                if (data.results.coordinates.latitude && data.results.coordinates.longitude) {
+                                    const lat = data.results.coordinates.latitude;
+                                    const lng = data.results.coordinates.longitude;
+                                    
+                                    // Añadir botón para ver en el mapa
+                                    html += `
+                                    <div style="margin-top: 10px;">
+                                        <button id="show-on-map-btn" class="button" 
+                                            onclick="showLocationOnMap(${lat}, ${lng}, '${data.results.country || 'Ubicación'}, ${data.results.city || ''}')">
+                                            Ver en mapa
+                                        </button>
+                                    </div>`;
+                                }
+                            }
+                            
                             if (data.results.supporting_evidence && data.results.supporting_evidence.length > 0) {
                                 html += '<div><strong>Evidencia:</strong><ul>';
                                 data.results.supporting_evidence.forEach(evidence => {
@@ -1106,6 +1131,21 @@
                         document.getElementById('start-mission-btn').disabled = false;
                     });
                 });
+            }
+            
+            // Función para mostrar ubicación en el mapa
+            function showLocationOnMap(lat, lng, title) {
+                // Centrar mapa en las coordenadas
+                map.setView([lat, lng], 15);
+                
+                // Crear marcador con popup
+                const marker = L.marker([lat, lng])
+                    .addTo(map)
+                    .bindPopup(`<strong>${title}</strong><br>Lat: ${lat}<br>Lng: ${lng}`)
+                    .openPopup();
+                
+                // Hacer visible el panel del mapa si está en pantalla pequeña
+                document.querySelector('.content-panel').scrollIntoView({ behavior: 'smooth' });
             }
         });
     </script>

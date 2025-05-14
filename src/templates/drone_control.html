@@ -488,9 +488,30 @@
     </footer>
 
     <script>
+        // Definir mapa y función de mostrar ubicación globalmente
+        let mapInstance;
+        
+        // Función global para mostrar ubicación en el mapa
+        function showLocationOnMap(lat, lng, title) {
+            // Centrar mapa en las coordenadas
+            mapInstance.setView([lat, lng], 15);
+            
+            // Crear marcador con popup
+            const marker = L.marker([lat, lng])
+                .addTo(mapInstance)
+                .bindPopup(`<strong>${title}</strong><br>Lat: ${lat}<br>Lng: ${lng}`)
+                .openPopup();
+            
+            // Hacer visible el panel del mapa si está en pantalla pequeña
+            document.querySelector('.content-panel').scrollIntoView({ behavior: 'smooth' });
+        }
+        
         document.addEventListener('DOMContentLoaded', function() {
             // Inicializar el mapa
             const map = L.map('map').setView([40.416775, -3.703790], 13);
+            // Asignar a la variable global
+            mapInstance = map;
+            
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(map);
@@ -687,7 +708,7 @@
                                     html += `
                                     <div style="margin-top: 10px;">
                                         <button id="show-on-map-btn" class="button" 
-                                            onclick="showLocationOnMap(${lat}, ${lng}, '${data.results.country || 'Ubicación'}, ${data.results.city || ''}')">
+                                            onclick="showLocationOnMap(${lat}, ${lng}, '${(data.results.country || '') + ', ' + (data.results.city || '')}')">
                                             Ver en mapa
                                         </button>
                                     </div>`;
@@ -1131,21 +1152,6 @@
                         document.getElementById('start-mission-btn').disabled = false;
                     });
                 });
-            }
-            
-            // Función para mostrar ubicación en el mapa
-            function showLocationOnMap(lat, lng, title) {
-                // Centrar mapa en las coordenadas
-                map.setView([lat, lng], 15);
-                
-                // Crear marcador con popup
-                const marker = L.marker([lat, lng])
-                    .addTo(map)
-                    .bindPopup(`<strong>${title}</strong><br>Lat: ${lat}<br>Lng: ${lng}`)
-                    .openPopup();
-                
-                // Hacer visible el panel del mapa si está en pantalla pequeña
-                document.querySelector('.content-panel').scrollIntoView({ behavior: 'smooth' });
             }
         });
     </script>

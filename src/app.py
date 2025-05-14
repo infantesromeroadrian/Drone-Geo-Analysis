@@ -114,6 +114,11 @@ def analyze():
         image_file = request.files['image']
         if image_file.filename == '':
             return jsonify({'error': 'Nombre de archivo vacío'}), 400
+        
+        # Obtener parámetros de configuración
+        confidence_threshold = float(request.form.get('confidence_threshold', 0))
+        model_version = request.form.get('model_version', 'default')
+        detail_level = request.form.get('detail_level', 'normal')
             
         # Guardar imagen en directorio temporal
         temp_dir = tempfile.gettempdir()
@@ -123,12 +128,22 @@ def analyze():
         # Obtener metadatos
         metadata = get_image_metadata(temp_path)
         
+        # Agregar parámetros de configuración a los metadatos
+        metadata['confidence_threshold'] = confidence_threshold
+        metadata['model_version'] = model_version
+        metadata['detail_level'] = detail_level
+        
         # Codificar imagen en base64
         with open(temp_path, "rb") as image_file:
             encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
         
         # Analizar la imagen
         results = analyzer.analyze_image(encoded_image, metadata)
+        
+        # Si se especificó un umbral de confianza, filtrar resultados
+        if confidence_threshold > 0:
+            if results.get('confidence', 0) < confidence_threshold:
+                results['warning'] = f"Resultados por debajo del umbral de confianza ({confidence_threshold}%)"
         
         # Guardar resultados
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -138,12 +153,13 @@ def analyze():
         # Devolver resultados como JSON
         return jsonify({
             'results': results,
-            'saved_path': save_path
+            'saved_path': save_path,
+            'status': 'completed'
         })
         
     except Exception as e:
         logger.error(f"Error en el análisis: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e), 'status': 'error'}), 500
 
 @app.route('/results/<path:filename>')
 def results(filename):
@@ -359,6 +375,19 @@ def calculate_position():
     except Exception as e:
         logger.error(f"Error al calcular posición: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/analysis/status', methods=['GET'])
+def analysis_status():
+    """Obtiene el estado actual del análisis en progreso."""
+    analysis_id = request.args.get('id')
+    # En una implementación real, esto consultaría el estado del análisis
+    # Aquí simulamos para demostración
+    return jsonify({
+        'id': analysis_id,
+        'status': 'processing',
+        'progress': 70,
+        'estimated_time_remaining': '30 segundos'
+    })
 
 def main():
     """Función principal que inicia el servidor web."""

@@ -34,11 +34,13 @@
         }
         
         .side-panel {
-            width: 320px;
+            width: 380px;
             background-color: white;
             padding: 15px;
             box-shadow: 2px 0 5px rgba(0,0,0,0.1);
             overflow-y: auto;
+            min-width: 380px;
+            flex: 0 0 auto;
         }
         
         .content-panel {
@@ -49,11 +51,13 @@
         }
         
         .map-container {
-            flex: 2;
+            flex: 1;
             position: relative;
             border: 1px solid #ddd;
             border-radius: 5px;
             margin-bottom: 20px;
+            height: 40vh;
+            max-height: 400px;
         }
         
         #map {
@@ -72,6 +76,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            height: 25vh;
+            max-height: 250px;
         }
         
         #video-stream {
@@ -234,7 +240,6 @@
             color: white;
         }
         
-        /* Animación de carga */
         .loader {
             border: 3px solid #f3f3f3;
             border-top: 3px solid #3498db;
@@ -252,10 +257,9 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* Estilos para análisis y barra de progreso */
         .analysis-progress {
             margin-top: 10px;
-            display: none; /* Oculto por defecto */
+            display: none;
         }
         
         .progress-bar-container {
@@ -270,7 +274,7 @@
         .progress-bar {
             height: 100%;
             background-color: #4CAF50;
-            width: 0%; /* Inicial 0% */
+            width: 0%;
             border-radius: 10px;
             transition: width 0.3s ease-in-out;
         }
@@ -305,6 +309,44 @@
         .slider-value {
             float: right;
             font-weight: bold;
+        }
+        
+        #analysis-results {
+            margin-top: 15px;
+            max-height: none;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+            border: 1px solid #e0e0e0;
+            line-height: 1.5;
+        }
+        
+        #results-content {
+            font-size: 14px;
+        }
+        
+        #results-content div {
+            margin-bottom: 6px;
+        }
+        
+        .coordinates-section {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #ccc;
+            background-color: #f0f8ff;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        
+        #show-on-map-btn {
+            background-color: #28a745;
+            padding: 8px 15px;
+        }
+        
+        #show-on-map-btn:hover {
+            background-color: #218838;
         }
     </style>
 </head>
@@ -372,6 +414,8 @@
                     <div class="tab active" data-tab="missions">Misiones</div>
                     <div class="tab" data-tab="geo">Geolocalización</div>
                     <div class="tab" data-tab="image-analysis">Análisis de Imágenes</div>
+                    <div class="tab" data-tab="detection">Detección</div>
+                    <div class="tab" data-tab="simulation">Simulación</div>
                 </div>
                 
                 <div class="tab-content active" id="missions-tab">
@@ -390,22 +434,23 @@
                 </div>
                 
                 <div class="tab-content" id="geo-tab">
-                    <h3>Análisis Geoespacial</h3>
-                    <div class="form-group">
-                        <label for="detection-mode">Modo de detección:</label>
-                        <select id="detection-mode">
-                            <option value="changes">Detección de cambios</option>
-                            <option value="correlation">Correlación satelital</option>
-                            <option value="triangulation">Triangulación</option>
-                        </select>
-                    </div>
-                    <div style="margin-top: 10px;">
-                        <button id="add-reference-btn">Agregar referencia</button>
-                        <button id="detect-changes-btn">Detectar cambios</button>
-                    </div>
-                    <div style="margin-top: 10px;">
-                        <button id="create-target-btn">Crear objetivo</button>
-                        <button id="calculate-position-btn">Calcular posición</button>
+                    <div class="panel-section">
+                        <h3>Triangulación y Correlación Geográfica</h3>
+                        
+                        <div class="form-group">
+                            <label for="detection-mode">Modo de Detección:</label>
+                            <select id="detection-mode">
+                                <option value="changes">Detección de Cambios</option>
+                                <option value="triangulation">Triangulación</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <button id="add-reference-btn">Añadir Referencia</button>
+                            <button id="detect-changes-btn">Detectar Cambios</button>
+                            <button id="create-target-btn">Crear Objetivo</button>
+                            <button id="calculate-position-btn">Calcular Posición</button>
+                        </div>
                     </div>
                 </div>
                 
@@ -416,7 +461,6 @@
                         <input type="file" id="image-input" accept="image/*">
                     </div>
                     
-                    <!-- Añadir configuración de análisis -->
                     <div class="analysis-settings">
                         <h4>Parámetros de Análisis</h4>
                         
@@ -454,7 +498,6 @@
                         <button id="analyze-location-btn">Analizar Ubicación</button>
                     </div>
                     
-                    <!-- Añadir barra de progreso -->
                     <div class="analysis-progress" id="analysis-progress">
                         <div class="progress-bar-container">
                             <div class="progress-bar" id="progress-bar"></div>
@@ -464,9 +507,46 @@
                         </div>
                     </div>
                     
-                    <div id="analysis-results" style="margin-top: 15px; max-height: 200px; overflow-y: auto; background-color: #f9f9f9; padding: 10px; border-radius: 4px; display: none;">
+                    <div id="analysis-results">
                         <h4>Resultados:</h4>
                         <div id="results-content"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="simulation-tab">
+                <div class="panel-section">
+                    <h3>Simulación de Vuelo</h3>
+                    <div class="form-group">
+                        <label for="simulation-route">Ruta de Vuelo:</label>
+                        <select id="simulation-route">
+                            <option value="">Seleccionar ruta...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Descripción:</label>
+                        <div id="route-description" class="telemetry-data">
+                            Seleccione una ruta para ver su descripción.
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Velocidad de simulación:</label>
+                        <input type="range" id="simulation-speed" min="1" max="10" value="5" class="slider">
+                        <span id="speed-value">5x</span>
+                    </div>
+                    
+                    <div>
+                        <button id="start-simulation-btn" disabled>Iniciar Simulación</button>
+                        <button id="stop-simulation-btn" disabled>Detener Simulación</button>
+                    </div>
+                    
+                    <div class="telemetry-data">
+                        <p>Estado de Simulación: <span id="simulation-status">No iniciada</span></p>
+                        <p>Progreso: <span id="simulation-progress">0%</span></p>
+                        <p>Altitud actual: <span id="simulation-altitude">0 m</span></p>
+                        <p>Velocidad: <span id="simulation-velocity">0 m/s</span></p>
                     </div>
                 </div>
             </div>
@@ -488,35 +568,27 @@
     </footer>
 
     <script>
-        // Definir mapa y función de mostrar ubicación globalmente
         let mapInstance;
         
-        // Función global para mostrar ubicación en el mapa
         function showLocationOnMap(lat, lng, title) {
-            // Centrar mapa en las coordenadas
             mapInstance.setView([lat, lng], 15);
             
-            // Crear marcador con popup
             const marker = L.marker([lat, lng])
                 .addTo(mapInstance)
                 .bindPopup(`<strong>${title}</strong><br>Lat: ${lat}<br>Lng: ${lng}`)
                 .openPopup();
             
-            // Hacer visible el panel del mapa si está en pantalla pequeña
             document.querySelector('.content-panel').scrollIntoView({ behavior: 'smooth' });
         }
         
         document.addEventListener('DOMContentLoaded', function() {
-            // Inicializar el mapa
             const map = L.map('map').setView([40.416775, -3.703790], 13);
-            // Asignar a la variable global
             mapInstance = map;
             
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(map);
             
-            // Marcador para el dron (inicialmente invisible)
             const droneMarker = L.marker([0, 0], {
                 icon: L.divIcon({
                     className: 'drone-marker',
@@ -526,14 +598,12 @@
                 })
             });
             
-            // Variables globales
             let connected = false;
             let streaming = false;
             let activeTab = 'missions';
             let activeMission = null;
             let telemetryInterval = null;
             
-            // Elementos del DOM
             const connectBtn = document.getElementById('connect-btn');
             const disconnectBtn = document.getElementById('disconnect-btn');
             const takeoffBtn = document.getElementById('takeoff-btn');
@@ -551,7 +621,6 @@
             const signalStrength = document.getElementById('signal-strength');
             const videoStream = document.getElementById('video-stream');
             
-            // Eventos para pestañas
             document.querySelectorAll('.tab').forEach(tab => {
                 tab.addEventListener('click', function() {
                     const tabName = this.getAttribute('data-tab');
@@ -559,7 +628,6 @@
                 });
             });
             
-            // Eventos para botones de control
             connectBtn.addEventListener('click', connectDrone);
             disconnectBtn.addEventListener('click', disconnectDrone);
             takeoffBtn.addEventListener('click', takeoffDrone);
@@ -567,31 +635,26 @@
             startStreamBtn.addEventListener('click', startVideoStream);
             stopStreamBtn.addEventListener('click', stopVideoStream);
             
-            // Misiones
             document.getElementById('create-mission-btn').addEventListener('click', createMission);
             document.getElementById('load-mission-btn').addEventListener('click', loadMissions);
             document.getElementById('start-mission-btn').addEventListener('click', startMission);
             document.getElementById('stop-mission-btn').addEventListener('click', stopMission);
             
-            // Análisis geo
             document.getElementById('add-reference-btn').addEventListener('click', addReference);
             document.getElementById('detect-changes-btn').addEventListener('click', detectChanges);
             document.getElementById('create-target-btn').addEventListener('click', createTarget);
             document.getElementById('calculate-position-btn').addEventListener('click', calculatePosition);
             
-            // Análisis de Imágenes
             const imageInput = document.getElementById('image-input');
             const imagePreview = document.getElementById('image-preview');
             const analyzeLocationBtn = document.getElementById('analyze-location-btn');
             const analysisResults = document.getElementById('analysis-results');
             const resultsContent = document.getElementById('results-content');
             
-            // Manejar la carga de imágenes para la pestaña de análisis
             imageInput.addEventListener('change', function(e) {
                 const file = e.target.files[0];
                 if (!file) return;
                 
-                // Mostrar vista previa
                 const reader = new FileReader();
                 reader.onload = function(evt) {
                     imagePreview.innerHTML = '';
@@ -601,81 +664,66 @@
                     img.style.maxWidth = '100%';
                     imagePreview.appendChild(img);
                     
-                    // Habilitar botón de análisis
                     analyzeLocationBtn.disabled = false;
                 };
                 reader.readAsDataURL(file);
                 
-                // Ocultar resultados anteriores
                 analysisResults.style.display = 'none';
             });
             
-            // Actualizar valor del umbral de confianza
             document.getElementById('confidence-threshold').addEventListener('input', function() {
                 document.getElementById('confidence-value').textContent = this.value + '%';
             });
             
-            // Analizar ubicación usando la API de análisis
             analyzeLocationBtn.addEventListener('click', function() {
                 if (!imageInput.files[0]) {
                     alert('Por favor seleccione una imagen primero');
                     return;
                 }
                 
-                // Mostrar indicador de progreso
                 analyzeLocationBtn.disabled = true;
                 analysisResults.style.display = 'none';
                 document.getElementById('analysis-progress').style.display = 'block';
                 
-                // Reiniciar barra de progreso
                 const progressBar = document.getElementById('progress-bar');
                 const progressText = document.getElementById('progress-text');
                 progressBar.style.width = '0%';
                 progressText.textContent = 'Preparando análisis...';
                 
-                // Crear FormData para enviar la imagen y parámetros
                 const formData = new FormData();
                 formData.append('image', imageInput.files[0]);
                 
-                // Añadir parámetros de configuración
                 formData.append('confidence_threshold', document.getElementById('confidence-threshold').value);
                 formData.append('model_version', document.getElementById('model-version').value);
                 formData.append('detail_level', document.getElementById('detail-level').value);
                 
-                // Simular progreso para UX
                 let progress = 0;
                 const progressInterval = setInterval(() => {
-                    if (progress < 90) { // Llenar hasta 90% como simulación
+                    if (progress < 90) {
                         progress += 5;
                         progressBar.style.width = progress + '%';
                         progressText.textContent = `Analizando imagen... ${progress}%`;
                     }
                 }, 300);
                 
-                // Enviar solicitud a la API
                 fetch('/analyze', {
                     method: 'POST',
                     body: formData
                 })
                 .then(response => response.json())
                 .then(data => {
-                    // Detener simulación y completar barra
                     clearInterval(progressInterval);
                     progressBar.style.width = '100%';
                     progressText.textContent = 'Análisis completado 100%';
                     
-                    // Mostrar resultados después de una pequeña pausa
                     setTimeout(() => {
-                        // Ocultar indicador de progreso
                         document.getElementById('analysis-progress').style.display = 'none';
                         
-                        // Mostrar resultados
                         analysisResults.style.display = 'block';
                         
                         if (data.error) {
                             resultsContent.innerHTML = `<div class="error">Error: ${data.error}</div>`;
                         } else {
-                            // Formatear resultados
                             let html = `
                                 <div><strong>País:</strong> ${data.results.country || 'No determinado'}</div>
                                 <div><strong>Ciudad:</strong> ${data.results.city || 'No determinada'}</div>
@@ -685,26 +733,22 @@
                                 <div><strong>Confianza:</strong> ${data.results.confidence || 0}%</div>
                             `;
                             
-                            // Mostrar advertencia si está por debajo del umbral
                             if (data.results.warning) {
                                 html = `<div class="warning">${data.results.warning}</div>` + html;
                             }
                             
-                            // Añadir coordenadas si existen
                             if (data.results.coordinates) {
                                 html += `
-                                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ccc;">
+                                <div class="coordinates-section">
                                     <div><strong>Coordenadas:</strong></div>
                                     <div>Latitud: ${data.results.coordinates.latitude || 'No disponible'}</div>
                                     <div>Longitud: ${data.results.coordinates.longitude || 'No disponible'}</div>
                                 </div>`;
                                 
-                                // Añadir marcador en el mapa si hay coordenadas válidas
                                 if (data.results.coordinates.latitude && data.results.coordinates.longitude) {
                                     const lat = data.results.coordinates.latitude;
                                     const lng = data.results.coordinates.longitude;
                                     
-                                    // Añadir botón para ver en el mapa
                                     html += `
                                     <div style="margin-top: 10px;">
                                         <button id="show-on-map-btn" class="button" 
@@ -729,7 +773,6 @@
                     }, 500);
                 })
                 .catch(error => {
-                    // Detener simulación
                     clearInterval(progressInterval);
                     document.getElementById('analysis-progress').style.display = 'none';
                     
@@ -739,9 +782,7 @@
                 });
             });
             
-            // Funciones de control de drone
             function connectDrone() {
-                // Simular conexión con el dron
                 fetch('/api/drone/connect', {
                     method: 'POST'
                 })
@@ -752,7 +793,6 @@
                         updateDroneStatus(true);
                         startTelemetryUpdates();
                         
-                        // Actualizar mapa con la posición inicial
                         updateDronePosition(data.position);
                     } else {
                         alert('Error al conectar con el dron: ' + data.error);
@@ -775,7 +815,6 @@
                         updateDroneStatus(false);
                         stopTelemetryUpdates();
                         
-                        // Quitar marcador del mapa
                         if (map.hasLayer(droneMarker)) {
                             map.removeLayer(droneMarker);
                         }
@@ -865,13 +904,11 @@
                 });
             }
             
-            // Funciones de misiones
             function createMission() {
                 const name = prompt('Nombre de la misión:', 'Nueva Misión');
                 if (!name) return;
                 
                 alert('Se abrirá el editor de misiones. Seleccione puntos en el mapa para crear waypoints.');
-                // Aquí se implementaría la lógica para añadir waypoints en el mapa
             }
             
             function loadMissions() {
@@ -928,12 +965,10 @@
                 });
             }
             
-            // Funciones de geolocalización
             function addReference() {
                 const mode = document.getElementById('detection-mode').value;
                 
                 if (mode === 'changes') {
-                    // Capturar imagen como referencia
                     fetch('/api/geo/reference/add', {
                         method: 'POST'
                     })
@@ -960,7 +995,6 @@
                     if (data.success) {
                         if (data.has_changes) {
                             alert(`Se detectaron cambios: ${data.change_percentage.toFixed(2)}% modificado`);
-                            // Aquí se mostraría la imagen con cambios resaltados
                         } else {
                             alert('No se detectaron cambios significativos');
                         }
@@ -1005,7 +1039,6 @@
                 .then(data => {
                     if (data.success) {
                         alert(`Posición calculada:\nLatitud: ${data.position.latitude}\nLongitud: ${data.position.longitude}\nPrecisión: ${data.precision.confidence}%`);
-                        // Añadir marcador en el mapa
                         L.marker([data.position.latitude, data.position.longitude])
                             .addTo(map)
                             .bindPopup(`Objetivo: ${targetId}<br>Precisión: ${data.precision.confidence}%`);
@@ -1018,9 +1051,7 @@
                 });
             }
             
-            // Funciones de utilidad
             function switchTab(tabName) {
-                // Desactivar todas las pestañas
                 document.querySelectorAll('.tab').forEach(tab => {
                     tab.classList.remove('active');
                 });
@@ -1028,7 +1059,6 @@
                     content.classList.remove('active');
                 });
                 
-                // Activar pestaña seleccionada
                 document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add('active');
                 document.getElementById(`${tabName}-tab`).classList.add('active');
                 
@@ -1041,7 +1071,6 @@
                     droneStatusIndicator.classList.add('status-connected');
                     droneStatusText.textContent = 'Conectado';
                     
-                    // Habilitar controles
                     connectBtn.disabled = true;
                     disconnectBtn.disabled = false;
                     takeoffBtn.disabled = false;
@@ -1053,7 +1082,6 @@
                     droneStatusIndicator.classList.add('status-disconnected');
                     droneStatusText.textContent = 'Desconectado';
                     
-                    // Deshabilitar controles
                     connectBtn.disabled = false;
                     disconnectBtn.disabled = true;
                     takeoffBtn.disabled = true;
@@ -1141,7 +1169,6 @@
                 
                 missionList.innerHTML = html;
                 
-                // Añadir eventos click
                 document.querySelectorAll('.mission-item').forEach(item => {
                     item.addEventListener('click', function() {
                         document.querySelectorAll('.mission-item').forEach(i => {
@@ -1153,6 +1180,251 @@
                     });
                 });
             }
+
+            // Código para simulación de vuelo
+            let simulationPaths = [];
+            let activePath = null;
+            let simulationInterval = null;
+            let currentWaypointIndex = 0;
+            let isSimulating = false;
+            let simulationPolyline = null;
+            let simulationAltitude = 0;
+            
+            // Cargar rutas disponibles
+            function loadSimulationPaths() {
+                fetch('/api/drone/simulate/paths')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            simulationPaths = data.paths;
+                            const select = document.getElementById('simulation-route');
+                            
+                            // Limpiar select
+                            select.innerHTML = '<option value="">Seleccionar ruta...</option>';
+                            
+                            // Agregar opciones
+                            simulationPaths.forEach(path => {
+                                const option = document.createElement('option');
+                                option.value = path.id;
+                                option.textContent = path.name;
+                                select.appendChild(option);
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error al cargar rutas:', error);
+                    });
+            }
+            
+            // Iniciar la simulación de vuelo
+            function startSimulation() {
+                if (!activePath) return;
+                
+                // Encontrar la ruta seleccionada
+                const selectedPath = simulationPaths.find(path => path.id === activePath);
+                if (!selectedPath) return;
+                
+                const waypoints = selectedPath.waypoints;
+                if (waypoints.length < 2) return;
+                
+                fetch('/api/drone/simulate/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ path_id: activePath })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Iniciar simulación localmente
+                        isSimulating = true;
+                        document.getElementById('simulation-status').textContent = 'En progreso';
+                        document.getElementById('start-simulation-btn').disabled = true;
+                        document.getElementById('stop-simulation-btn').disabled = false;
+                        
+                        // Actualizar mapa
+                        setupSimulationMap(selectedPath);
+                        
+                        // Iniciar animación
+                        currentWaypointIndex = 0;
+                        simulateNextSegment();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error al iniciar simulación:', error);
+                });
+            }
+            
+            // Detener la simulación de vuelo
+            function stopSimulation() {
+                isSimulating = false;
+                
+                if (simulationInterval) {
+                    clearInterval(simulationInterval);
+                    simulationInterval = null;
+                }
+                
+                document.getElementById('simulation-status').textContent = 'Detenida';
+                document.getElementById('start-simulation-btn').disabled = false;
+                document.getElementById('stop-simulation-btn').disabled = true;
+                
+                // Eliminar la polyline si existe
+                if (simulationPolyline && mapInstance.hasLayer(simulationPolyline)) {
+                    mapInstance.removeLayer(simulationPolyline);
+                }
+            }
+            
+            // Configurar el mapa para la simulación
+            function setupSimulationMap(path) {
+                // Dibujar ruta completa en el mapa
+                const routePoints = path.waypoints.map(wp => [wp.lat, wp.lng]);
+                
+                // Crear y añadir polyline para la ruta
+                if (simulationPolyline && mapInstance.hasLayer(simulationPolyline)) {
+                    mapInstance.removeLayer(simulationPolyline);
+                }
+                
+                simulationPolyline = L.polyline(routePoints, {
+                    color: '#3388ff',
+                    weight: 3,
+                    opacity: 0.5,
+                    dashArray: '10, 10',
+                    lineCap: 'round'
+                }).addTo(mapInstance);
+                
+                // Ajustar vista a la ruta
+                mapInstance.fitBounds(simulationPolyline.getBounds(), {
+                    padding: [50, 50]
+                });
+                
+                // Añadir marcadores para cada waypoint
+                path.waypoints.forEach((wp, index) => {
+                    L.circleMarker([wp.lat, wp.lng], {
+                        radius: 5,
+                        color: '#3388ff',
+                        fillColor: '#66aaff',
+                        fillOpacity: 0.7
+                    }).addTo(mapInstance)
+                    .bindTooltip(`Waypoint ${index+1}<br>Alt: ${wp.alt}m`);
+                });
+            }
+            
+            // Simular movimiento entre waypoints
+            function simulateNextSegment() {
+                if (!isSimulating) return;
+                
+                const path = simulationPaths.find(p => p.id === activePath);
+                if (!path) return;
+                
+                const waypoints = path.waypoints;
+                
+                // Si llegamos al final, reiniciar o detener
+                if (currentWaypointIndex >= waypoints.length - 1) {
+                    document.getElementById('simulation-status').textContent = 'Completada';
+                    document.getElementById('simulation-progress').textContent = '100%';
+                    isSimulating = false;
+                    document.getElementById('start-simulation-btn').disabled = false;
+                    document.getElementById('stop-simulation-btn').disabled = true;
+                    return;
+                }
+                
+                // Obtener waypoints actual y siguiente
+                const currentWp = waypoints[currentWaypointIndex];
+                const nextWp = waypoints[currentWaypointIndex + 1];
+                
+                // Obtener velocidad de simulación
+                const speed = parseInt(document.getElementById('simulation-speed').value);
+                
+                // Calcular puntos intermedios para la animación
+                const steps = 50 / speed; // Más lento = más pasos
+                const latStep = (nextWp.lat - currentWp.lat) / steps;
+                const lngStep = (nextWp.lng - currentWp.lng) / steps;
+                const altStep = (nextWp.alt - currentWp.alt) / steps;
+                
+                let currentStep = 0;
+                let simulationVelocity = 0;
+                
+                // Calcular la distancia aproximada entre waypoints en metros
+                const distance = mapInstance.distance(
+                    [currentWp.lat, currentWp.lng],
+                    [nextWp.lat, nextWp.lng]
+                );
+                
+                // Velocidad en m/s (asumiendo que cada paso toma 100ms)
+                simulationVelocity = (distance / steps) * (1000 / 100);
+                
+                // Actualizar posición gradualmente
+                simulationInterval = setInterval(() => {
+                    if (!isSimulating) {
+                        clearInterval(simulationInterval);
+                        return;
+                    }
+                    
+                    currentStep++;
+                    
+                    if (currentStep >= steps) {
+                        // Llegamos al siguiente waypoint
+                        clearInterval(simulationInterval);
+                        simulationAltitude = nextWp.alt;
+                        
+                        // Mover marcador exactamente al waypoint
+                        droneMarker.setLatLng([nextWp.lat, nextWp.lng]);
+                        
+                        // Actualizar datos de simulación
+                        document.getElementById('simulation-altitude').textContent = `${simulationAltitude} m`;
+                        document.getElementById('simulation-velocity').textContent = `${simulationVelocity.toFixed(1)} m/s`;
+                        
+                        // Progreso total
+                        const progress = Math.round(((currentWaypointIndex + 1) / (waypoints.length - 1)) * 100);
+                        document.getElementById('simulation-progress').textContent = `${progress}%`;
+                        
+                        // Avanzar al siguiente segmento
+                        currentWaypointIndex++;
+                        setTimeout(simulateNextSegment, 500);
+                        return;
+                    }
+                    
+                    // Posición intermedia
+                    const newLat = currentWp.lat + (latStep * currentStep);
+                    const newLng = currentWp.lng + (lngStep * currentStep);
+                    simulationAltitude = currentWp.alt + (altStep * currentStep);
+                    
+                    // Mover marcador del dron
+                    droneMarker.setLatLng([newLat, newLng]);
+                    
+                    // Actualizar datos de simulación
+                    document.getElementById('simulation-altitude').textContent = `${Math.round(simulationAltitude)} m`;
+                    document.getElementById('simulation-velocity').textContent = `${simulationVelocity.toFixed(1)} m/s`;
+                    
+                }, 100);
+            }
+            
+            // Event listeners para simulación
+            document.getElementById('simulation-route').addEventListener('change', function() {
+                activePath = this.value;
+                
+                if (activePath) {
+                    const selectedPath = simulationPaths.find(path => path.id === activePath);
+                    if (selectedPath) {
+                        document.getElementById('route-description').textContent = selectedPath.description;
+                        document.getElementById('start-simulation-btn').disabled = false;
+                    }
+                } else {
+                    document.getElementById('route-description').textContent = 'Seleccione una ruta para ver su descripción.';
+                    document.getElementById('start-simulation-btn').disabled = true;
+                }
+            });
+            
+            document.getElementById('simulation-speed').addEventListener('input', function() {
+                document.getElementById('speed-value').textContent = this.value + 'x';
+            });
+            
+            document.getElementById('start-simulation-btn').addEventListener('click', startSimulation);
+            document.getElementById('stop-simulation-btn').addEventListener('click', stopSimulation);
+            
+            // Cargar rutas al iniciar
+            loadSimulationPaths();
         });
     </script>
 </body>

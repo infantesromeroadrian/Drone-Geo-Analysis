@@ -14,6 +14,7 @@ from datetime import datetime
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from dotenv import load_dotenv
 import tempfile
+import time
 
 # Agregar la ruta del proyecto al PYTHONPATH
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -388,6 +389,80 @@ def analysis_status():
         'progress': 70,
         'estimated_time_remaining': '30 segundos'
     })
+
+# Rutas para simulación de vuelo
+@app.route('/api/drone/simulate/paths', methods=['GET'])
+def get_simulation_paths():
+    """Obtiene rutas predefinidas para simulación de vuelo."""
+    # Rutas de vuelo simuladas predefinidas
+    simulated_paths = [
+        {
+            "id": "route_1",
+            "name": "Reconocimiento urbano",
+            "description": "Ruta de reconocimiento urbano básico",
+            "waypoints": [
+                {"lat": 40.416775, "lng": -3.703790, "alt": 50},
+                {"lat": 40.415800, "lng": -3.702500, "alt": 80},
+                {"lat": 40.414900, "lng": -3.704000, "alt": 100},
+                {"lat": 40.416200, "lng": -3.705500, "alt": 80},
+                {"lat": 40.417500, "lng": -3.704800, "alt": 50},
+                {"lat": 40.416775, "lng": -3.703790, "alt": 30}
+            ]
+        },
+        {
+            "id": "route_2",
+            "name": "Patrulla perimetral",
+            "description": "Ruta circular para vigilancia de perímetro",
+            "waypoints": [
+                {"lat": 40.416775, "lng": -3.703790, "alt": 50},
+                {"lat": 40.417900, "lng": -3.702000, "alt": 60},
+                {"lat": 40.419100, "lng": -3.703400, "alt": 70},
+                {"lat": 40.418400, "lng": -3.705900, "alt": 70},
+                {"lat": 40.416500, "lng": -3.706200, "alt": 60},
+                {"lat": 40.415200, "lng": -3.704900, "alt": 50},
+                {"lat": 40.416775, "lng": -3.703790, "alt": 40}
+            ]
+        },
+        {
+            "id": "route_3",
+            "name": "Exploración en zigzag",
+            "description": "Patrón de búsqueda en zigzag para cubrir área",
+            "waypoints": [
+                {"lat": 40.416775, "lng": -3.703790, "alt": 60},
+                {"lat": 40.417800, "lng": -3.702500, "alt": 80},
+                {"lat": 40.418700, "lng": -3.704200, "alt": 100},
+                {"lat": 40.417600, "lng": -3.705800, "alt": 100},
+                {"lat": 40.416500, "lng": -3.707100, "alt": 80},
+                {"lat": 40.415400, "lng": -3.705700, "alt": 60},
+                {"lat": 40.414300, "lng": -3.704200, "alt": 50},
+                {"lat": 40.415500, "lng": -3.702800, "alt": 40},
+                {"lat": 40.416775, "lng": -3.703790, "alt": 30}
+            ]
+        }
+    ]
+    
+    return jsonify({"success": True, "paths": simulated_paths})
+
+@app.route('/api/drone/simulate/start', methods=['POST'])
+def start_simulation():
+    """Inicia una simulación de vuelo."""
+    try:
+        data = request.json
+        path_id = data.get('path_id')
+        
+        if not path_id:
+            return jsonify({'success': False, 'error': 'ID de ruta no especificado'})
+        
+        # En una implementación real, iniciaríamos un proceso de simulación
+        # Aquí simplemente devolvemos éxito para que el frontend pueda animar
+        return jsonify({
+            'success': True,
+            'message': f'Simulación iniciada para ruta {path_id}',
+            'simulation_id': f'sim_{int(time.time())}'
+        })
+    except Exception as e:
+        logger.error(f"Error al iniciar simulación: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
 
 def main():
     """Función principal que inicia el servidor web."""

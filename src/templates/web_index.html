@@ -3,172 +3,628 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Análisis Geográfico OSINT</title>
+    <title>Drone Geo Analysis - Quick Analysis</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary: #0F172A;
+            --secondary: #1E293B;
+            --accent: #3B82F6;
+            --accent-light: #60A5FA;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --danger: #EF4444;
+            --text-primary: #F8FAFC;
+            --text-secondary: #CBD5E1;
+            --text-muted: #94A3B8;
+            --border: #334155;
+            --bg-card: #1E293B;
+            --bg-input: #0F172A;
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            --shadow-xl: 0 35px 60px -12px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--primary);
+            color: var(--text-primary);
             line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            color: #333;
-            background-color: #f5f5f5;
+            overflow-x: hidden;
         }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            gap: 20px;
-        }
-        header {
-            background-color: #2c3e50;
+
+        /* Header */
+        .header {
+            background: var(--gradient-primary);
             color: white;
-            padding: 1rem;
-            margin-bottom: 20px;
+            padding: 2rem 0;
             text-align: center;
+            position: relative;
+            overflow: hidden;
         }
-        h1, h2, h3 {
-            color: #2c3e50;
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
         }
-        header h1 {
+
+        .header .container {
+            position: relative;
+            z-index: 2;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* Navigation */
+        .header-nav {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            font-size: 0.875rem;
+            border: 1px solid transparent;
+        }
+
+        .nav-link:hover {
             color: white;
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .nav-link.active {
+            color: white;
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .nav-link i {
+            font-size: 1rem;
+        }
+
+        .header-content h1 {
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .header-content h1 i {
+            animation: pulse 2s infinite;
+        }
+
+        .header-content p {
+            font-size: 1.125rem;
+            color: rgba(255, 255, 255, 0.9);
             margin: 0;
         }
+
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+            min-height: calc(100vh - 200px);
+        }
+
+        /* Left Panel */
         .left-panel {
-            flex: 1;
-            background-color: white;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            height: fit-content;
+            position: sticky;
+            top: 2rem;
         }
-        .right-panel {
-            flex: 2;
-            background-color: white;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
+
         .control-group {
-            margin-bottom: 20px;
+            margin-bottom: 2rem;
         }
+
+        .control-group label {
+            display: block;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: block;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .file-input-button {
+            display: block;
+            width: 100%;
+            padding: 1rem;
+            background: var(--bg-input);
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text-secondary);
+        }
+
+        .file-input-button:hover {
+            border-color: var(--accent);
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .file-input-button i {
+            font-size: 2rem;
+            color: var(--accent);
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
         .image-preview {
             width: 100%;
             max-height: 300px;
-            background-color: #eee;
-            margin-bottom: 20px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
+            position: relative;
         }
+
         .image-preview img {
             max-width: 100%;
             max-height: 300px;
+            object-fit: contain;
         }
-        button {
-            background-color: #3498db;
+
+        .image-preview.empty {
+            min-height: 200px;
+            color: var(--text-muted);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.875rem 1.5rem;
+            background: var(--gradient-primary);
             color: white;
             border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
+            border-radius: 8px;
+            font-weight: 600;
             cursor: pointer;
-            transition: background-color 0.3s;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            justify-content: center;
         }
-        button:hover {
-            background-color: #2980b9;
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
         }
-        button:disabled {
-            background-color: #95a5a6;
+
+        .btn:disabled {
+            background: var(--border);
             cursor: not-allowed;
+            transform: none;
         }
-        #result-container {
-            background-color: #f9f9f9;
-            padding: 20px;
-            border-radius: 5px;
+
+        .btn-full {
+            width: 100%;
+        }
+
+        /* Info Section */
+        .info-section {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .info-grid {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .info-label {
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .info-value {
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        /* Right Panel */
+        .right-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .result-container {
+            flex: 1;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
             overflow-y: auto;
-            max-height: 600px;
-            margin-top: 20px;
+            max-height: 70vh;
         }
-        .result-item {
-            margin-bottom: 10px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #eee;
-        }
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 2s linear infinite;
-            margin: 20px auto;
-            display: none;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .evidence-list {
-            list-style-type: disc;
-            padding-left: 20px;
-        }
-        .alternatives {
-            margin-top: 20px;
-            padding-top: 10px;
-            border-top: 1px dashed #ccc;
-        }
-        footer {
+
+        .result-container.empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
             text-align: center;
-            margin-top: 20px;
-            padding: 10px;
-            color: #7f8c8d;
-            font-size: 0.9em;
+        }
+
+        .result-item {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .result-item h3 {
+            color: var(--accent);
+            font-size: 1.125rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .location-grid {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .location-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+        }
+
+        .location-label {
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .location-value {
+            color: var(--text-primary);
+            text-align: right;
+        }
+
+        .confidence-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .evidence-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .evidence-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(59, 130, 246, 0.05);
+            border-left: 3px solid var(--accent);
+            border-radius: 0 8px 8px 0;
+        }
+
+        .evidence-list li i {
+            color: var(--accent);
+            margin-top: 0.125rem;
+        }
+
+        /* Loading Animation */
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--secondary);
+            border-top: 1px solid var(--border);
+            padding: 2rem;
+            text-align: center;
+            margin-top: 2rem;
+        }
+
+        .footer p {
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent-light);
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .left-panel {
+                position: static;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header {
+                padding: 1.5rem 1rem;
+            }
+
+            .left-panel,
+            .right-panel {
+                padding: 1.5rem;
+            }
+
+            .footer-links {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
+        /* Animations */
+        .fade-in {
+            opacity: 0;
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .slide-up {
+            transform: translateY(20px);
+            opacity: 0;
+            animation: slideUp 0.6s ease-out forwards;
+        }
+
+        @keyframes slideUp {
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
     </style>
 </head>
 <body>
-    <header>
-        <h1>Herramienta de Análisis Geográfico OSINT</h1>
+    <header class="header">
+        <div class="container">
+            <nav class="header-nav">
+                <a href="/" class="nav-link">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="/web_index.html" class="nav-link active">
+                    <i class="fas fa-search"></i>
+                    <span>Análisis Rápido</span>
+                </a>
+                <a href="/drone_control.html" class="nav-link">
+                    <i class="fas fa-gamepad"></i>
+                    <span>Control Panel</span>
+                </a>
+            </nav>
+            
+            <div class="header-content">
+                <h1><i class="fas fa-microscope"></i> Análisis Geográfico Rápido</h1>
+                <p>Análisis OSINT instantáneo con inteligencia artificial</p>
+            </div>
+        </div>
     </header>
 
     <div class="container">
         <div class="left-panel">
-            <h2>Controles</h2>
+            <h2 class="section-title">
+                <i class="fas fa-upload"></i>
+                Image Analysis
+            </h2>
+            
             <div class="control-group">
-                <label for="image-input">Seleccionar imagen:</label>
-                <input type="file" id="image-input" accept="image/*" title="Seleccionar una imagen para análisis">
+                <label for="image-input">Upload Image for Analysis:</label>
+                <div class="file-input-wrapper">
+                    <input type="file" id="image-input" accept="image/*">
+                    <div class="file-input-button" id="file-button">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <div>Click to select or drag image here</div>
+                        <small>JPG, PNG, GIF, BMP supported</small>
+                    </div>
+                </div>
             </div>
-            <div class="image-preview" id="preview-container">
-                <p>Vista previa de la imagen</p>
+
+            <div class="image-preview empty" id="preview-container">
+                <p><i class="fas fa-image"></i> Image preview will appear here</p>
             </div>
+
             <div class="control-group">
-                <button id="analyze-btn" disabled>Analizar imagen</button>
+                <button class="btn btn-full" id="analyze-btn" disabled>
+                    <i class="fas fa-brain"></i>
+                    Analyze with AI
+                </button>
             </div>
-            <div class="loader" id="loader"></div>
-            <div class="control-group">
-                <h3>Información de imagen</h3>
-                <div id="image-info">
-                    <p>Nombre: <span id="image-name">-</span></p>
-                    <p>Tamaño: <span id="image-size">-</span></p>
-                    <p>Dimensiones: <span id="image-dimensions">-</span></p>
+
+            <div class="loader" id="loader">
+                <div class="spinner"></div>
+                <p>Analyzing image with GPT-4 Vision...</p>
+            </div>
+
+            <div class="info-section">
+                <h3 class="section-title">
+                    <i class="fas fa-info-circle"></i>
+                    Image Information
+                </h3>
+                <div class="info-grid" id="image-info">
+                    <div class="info-item">
+                        <span class="info-label">Name:</span>
+                        <span class="info-value" id="image-name">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Size:</span>
+                        <span class="info-value" id="image-size">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Dimensions:</span>
+                        <span class="info-value" id="image-dimensions">-</span>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div class="right-panel">
-            <h2>Resultados del análisis</h2>
-            <div id="result-container">
-                <p>Cargue una imagen y presione "Analizar imagen" para comenzar.</p>
+            <h2 class="section-title">
+                <i class="fas fa-chart-line"></i>
+                Analysis Results
+            </h2>
+            
+            <div class="result-container empty" id="result-container">
+                <div>
+                    <i class="fas fa-search" style="font-size: 3rem; color: var(--border); margin-bottom: 1rem;"></i>
+                    <p>Upload an image and click "Analyze with AI" to begin geospatial analysis.</p>
+                    <p style="margin-top: 1rem;">
+                        <a href="/" style="color: var(--accent); text-decoration: none;">
+                            <i class="fas fa-home"></i> Go to main page
+                        </a> | 
+                        <a href="/drone_control.html" style="color: var(--accent); text-decoration: none;">
+                            <i class="fas fa-gamepad"></i> Control Panel
+                        </a>
+                    </p>
+                </div>
             </div>
         </div>
     </div>
 
-    <footer>
-        <p>Drone-Geo-Analysis - Herramienta de análisis geográfico con GPT-4 Vision</p>
+    <footer class="footer">
+        <p><strong>Drone Geo Analysis Platform</strong> - Professional OSINT Intelligence Suite</p>
+        <p>Advanced geospatial analysis for military and intelligence operations</p>
+        <div class="footer-links">
+            <a href="/">Home</a>
+            <a href="/drone_control.html">Control Panel</a>
+            <a href="#about">Documentation</a>
+        </div>
     </footer>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const imageInput = document.getElementById('image-input');
+            const fileButton = document.getElementById('file-button');
             const previewContainer = document.getElementById('preview-container');
             const analyzeBtn = document.getElementById('analyze-btn');
             const resultContainer = document.getElementById('result-container');
@@ -177,131 +633,216 @@
             const imageSize = document.getElementById('image-size');
             const imageDimensions = document.getElementById('image-dimensions');
 
-            // Gestionar la carga de imágenes
+            // File input handling
+            fileButton.addEventListener('click', () => imageInput.click());
+            
+            fileButton.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                fileButton.style.borderColor = 'var(--accent)';
+                fileButton.style.background = 'rgba(59, 130, 246, 0.1)';
+            });
+
+            fileButton.addEventListener('dragleave', () => {
+                fileButton.style.borderColor = 'var(--border)';
+                fileButton.style.background = 'var(--bg-input)';
+            });
+
+            fileButton.addEventListener('drop', (e) => {
+                e.preventDefault();
+                fileButton.style.borderColor = 'var(--border)';
+                fileButton.style.background = 'var(--bg-input)';
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    imageInput.files = files;
+                    handleFileSelect(files[0]);
+                }
+            });
+
             imageInput.addEventListener('change', function(e) {
                 const file = e.target.files[0];
-                if (!file) return;
+                if (file) {
+                    handleFileSelect(file);
+                }
+            });
 
-                // Mostrar información de la imagen
+            function handleFileSelect(file) {
+                // Update file info
                 imageName.textContent = file.name;
                 imageSize.textContent = formatFileSize(file.size);
 
-                // Crear vista previa
+                // Create preview
                 const reader = new FileReader();
                 reader.onload = function(e) {
+                    previewContainer.classList.remove('empty');
                     previewContainer.innerHTML = '';
                     const img = document.createElement('img');
                     img.src = e.target.result;
-                    previewContainer.appendChild(img);
-
-                    // Obtener dimensiones cuando la imagen esté cargada
                     img.onload = function() {
                         imageDimensions.textContent = `${img.naturalWidth} × ${img.naturalHeight}`;
                     };
+                    previewContainer.appendChild(img);
                 };
                 reader.readAsDataURL(file);
 
-                // Habilitar botón de análisis
+                // Enable analyze button
                 analyzeBtn.disabled = false;
-            });
+            }
 
-            // Gestionar el análisis
+            // Analysis handling
             analyzeBtn.addEventListener('click', function() {
                 const file = imageInput.files[0];
                 if (!file) return;
 
-                // Mostrar loader
+                // Show loader
                 loader.style.display = 'block';
-                resultContainer.innerHTML = '<p>Analizando imagen...</p>';
+                resultContainer.classList.add('empty');
+                resultContainer.innerHTML = '<p>Analyzing image...</p>';
                 
-                // Preparar la imagen para enviar
+                // Prepare form data
                 const formData = new FormData();
                 formData.append('image', file);
 
-                // Enviar solicitud al servidor
+                // Send request
                 fetch('/analyze', {
                     method: 'POST',
                     body: formData
                 })
                 .then(response => response.json())
                 .then(data => {
-                    // Ocultar loader
                     loader.style.display = 'none';
                     
                     if (data.error) {
-                        resultContainer.innerHTML = `<p>Error: ${data.error}</p>`;
+                        showError(data.error);
                         return;
                     }
                     
-                    // Mostrar resultados formateados
                     displayResults(data.results);
                 })
                 .catch(error => {
                     loader.style.display = 'none';
-                    resultContainer.innerHTML = `<p>Error: ${error.message}</p>`;
+                    showError(`Connection error: ${error.message}`);
                 });
             });
 
-            // Función para mostrar resultados
             function displayResults(results) {
+                resultContainer.classList.remove('empty');
+                
                 let html = `
-                    <div class="result-item">
-                        <h3>Ubicación identificada</h3>
-                        <p><strong>País:</strong> ${results.country || 'No determinado'}</p>
-                        <p><strong>Ciudad:</strong> ${results.city || 'No determinado'}</p>
-                        <p><strong>Distrito:</strong> ${results.district || 'No determinado'}</p>
-                        <p><strong>Barrio:</strong> ${results.neighborhood || 'No determinado'}</p>
-                        <p><strong>Calle:</strong> ${results.street || 'No determinado'}</p>
-                        <p><strong>Coordenadas:</strong> ${results.coordinates ? `${results.coordinates.latitude}, ${results.coordinates.longitude}` : 'No determinadas'}</p>
-                        <p><strong>Nivel de confianza:</strong> ${results.confidence || 0}%</p>
+                    <div class="result-item fade-in">
+                        <h3><i class="fas fa-map-marker-alt"></i> Location Analysis</h3>
+                        <div class="location-grid">
+                            <div class="location-item">
+                                <span class="location-label">Country:</span>
+                                <span class="location-value">${results.country || 'Not determined'}</span>
+                            </div>
+                            <div class="location-item">
+                                <span class="location-label">City:</span>
+                                <span class="location-value">${results.city || 'Not determined'}</span>
+                            </div>
+                            <div class="location-item">
+                                <span class="location-label">District:</span>
+                                <span class="location-value">${results.district || 'Not determined'}</span>
+                            </div>
+                            <div class="location-item">
+                                <span class="location-label">Neighborhood:</span>
+                                <span class="location-value">${results.neighborhood || 'Not determined'}</span>
+                            </div>
+                            <div class="location-item">
+                                <span class="location-label">Street:</span>
+                                <span class="location-value">${results.street || 'Not determined'}</span>
+                            </div>
+                            <div class="location-item">
+                                <span class="location-label">Confidence:</span>
+                                <span class="confidence-badge">
+                                    <i class="fas fa-check-circle"></i>
+                                    ${results.confidence || 0}%
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 `;
 
-                // Evidencias
+                if (results.coordinates) {
+                    html += `
+                        <div class="result-item slide-up">
+                            <h3><i class="fas fa-crosshairs"></i> Coordinates</h3>
+                            <div class="location-grid">
+                                <div class="location-item">
+                                    <span class="location-label">Latitude:</span>
+                                    <span class="location-value" style="font-family: 'JetBrains Mono', monospace;">${results.coordinates.latitude || 'N/A'}</span>
+                                </div>
+                                <div class="location-item">
+                                    <span class="location-label">Longitude:</span>
+                                    <span class="location-value" style="font-family: 'JetBrains Mono', monospace;">${results.coordinates.longitude || 'N/A'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
                 if (results.supporting_evidence && results.supporting_evidence.length > 0) {
                     html += `
-                        <div class="result-item">
-                            <h3>Evidencias</h3>
+                        <div class="result-item slide-up">
+                            <h3><i class="fas fa-search"></i> Supporting Evidence</h3>
                             <ul class="evidence-list">
                     `;
                     
                     results.supporting_evidence.forEach(evidence => {
-                        html += `<li>${evidence}</li>`;
+                        html += `<li><i class="fas fa-check"></i>${evidence}</li>`;
                     });
                     
                     html += `</ul></div>`;
                 }
 
-                // Alternativas
                 if (results.possible_alternatives && results.possible_alternatives.length > 0) {
                     html += `
-                        <div class="result-item alternatives">
-                            <h3>Ubicaciones alternativas posibles</h3>
+                        <div class="result-item slide-up">
+                            <h3><i class="fas fa-map"></i> Alternative Locations</h3>
+                            <div class="location-grid">
                     `;
                     
                     results.possible_alternatives.forEach((alt, index) => {
                         html += `
-                            <div>
-                                <p><strong>Alternativa ${index + 1}:</strong></p>
-                                <p>País: ${alt.country || 'No determinado'}, 
-                                   Ciudad: ${alt.city || 'No determinado'}, 
-                                   Confianza: ${alt.confidence || 0}%</p>
+                            <div class="location-item">
+                                <span class="location-label">Alternative ${index + 1}:</span>
+                                <span class="location-value">${alt.country || 'Unknown'}, ${alt.city || 'Unknown'} (${alt.confidence || 0}%)</span>
                             </div>
                         `;
                     });
                     
-                    html += `</div>`;
+                    html += `</div></div>`;
                 }
 
-                // Si hay un error
-                if (results.error) {
-                    html += `<div class="result-item"><p><strong>Error:</strong> ${results.error}</p></div>`;
-                }
+                html += `
+                    <div style="text-align: center; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+                        <a href="/drone_control.html" class="btn">
+                            <i class="fas fa-external-link-alt"></i>
+                            Open in Control Panel
+                        </a>
+                    </div>
+                `;
 
                 resultContainer.innerHTML = html;
             }
 
-            // Función para formatear el tamaño del archivo
+            function showError(message) {
+                resultContainer.classList.remove('empty');
+                resultContainer.innerHTML = `
+                    <div class="result-item" style="text-align: center; color: var(--danger);">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                        <h3>Analysis Error</h3>
+                        <p>${message}</p>
+                        <div style="margin-top: 1rem;">
+                            <button class="btn" onclick="location.reload()">
+                                <i class="fas fa-refresh"></i>
+                                Try Again
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
             function formatFileSize(bytes) {
                 if (bytes === 0) return '0 Bytes';
                 const k = 1024;

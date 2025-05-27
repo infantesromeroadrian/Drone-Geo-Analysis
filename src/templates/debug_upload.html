@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEBUG: Upload Button Analysis</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #00ff00;
+            padding: 20px;
+            margin: 0;
+        }
+        
+        .debug-section {
+            border: 1px solid #00ff00;
+            margin: 10px 0;
+            padding: 15px;
+            background: rgba(0, 255, 0, 0.05);
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        button {
+            background: #333;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 10px 15px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        
+        button:hover {
+            background: #00ff00;
+            color: #000;
+        }
+        
+        .result {
+            margin: 5px 0;
+            padding: 5px;
+        }
+        
+        .success { color: #00ff00; }
+        .error { color: #ff0000; }
+        .warning { color: #ffaa00; }
+        .info { color: #00aaff; }
+    </style>
+</head>
+<body>
+    <h1>🐛 DEBUG: Análisis Completo del Botón Upload</h1>
+    
+    <div class="debug-section">
+        <h2>📋 ELEMENTOS HTML</h2>
+        <input type="file" id="cartography-input" accept=".geojson,.json" class="hidden">
+        <button id="upload-cartography-btn" type="button">🗂️ Test Button</button>
+        <div id="html-analysis"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>🔧 TESTS AUTOMATIZADOS</h2>
+        <button onclick="runAllTests()">▶️ Ejecutar Todos los Tests</button>
+        <button onclick="clearResults()">🗑️ Limpiar</button>
+        <div id="test-results"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>🌐 INFORMACIÓN DEL NAVEGADOR</h2>
+        <div id="browser-info"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>📊 LOGS EN TIEMPO REAL</h2>
+        <div id="live-logs"></div>
+    </div>
+
+    <script>
+        let testResults = document.getElementById('test-results');
+        let liveLogs = document.getElementById('live-logs');
+        let testCount = 0;
+        
+        function addResult(message, type = 'info') {
+            testCount++;
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = `[${testCount.toString().padStart(2, '0')}] ${message}`;
+            testResults.appendChild(div);
+            
+            // También agregar a logs en vivo
+            addLog(message, type);
+        }
+        
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = `[${timestamp}] ${message}`;
+            liveLogs.appendChild(div);
+            liveLogs.scrollTop = liveLogs.scrollHeight;
+        }
+        
+        function clearResults() {
+            testResults.innerHTML = '';
+            liveLogs.innerHTML = '';
+            testCount = 0;
+        }
+        
+        // Test 1: Verificar existencia de elementos DOM
+        function testDOMElements() {
+            addResult('=== TEST 1: ELEMENTOS DOM ===', 'info');
+            
+            const input = document.getElementById('cartography-input');
+            const button = document.getElementById('upload-cartography-btn');
+            
+            if (input) {
+                addResult('✅ Input encontrado', 'success');
+                addResult(`   Type: ${input.type}`, 'info');
+                addResult(`   Accept: ${input.accept}`, 'info');
+                addResult(`   Hidden: ${input.classList.contains('hidden')}`, 'info');
+                addResult(`   Display: ${window.getComputedStyle(input).display}`, 'info');
+            } else {
+                addResult('❌ Input NO encontrado', 'error');
+                return false;
+            }
+            
+            if (button) {
+                addResult('✅ Button encontrado', 'success');
+                addResult(`   Type: ${button.type}`, 'info');
+                addResult(`   Disabled: ${button.disabled}`, 'info');
+                addResult(`   Visible: ${window.getComputedStyle(button).display !== 'none'}`, 'info');
+            } else {
+                addResult('❌ Button NO encontrado', 'error');
+                return false;
+            }
+            
+            return true;
+        }
+        
+        // Test 2: Verificar capacidades del navegador
+        function testBrowserCapabilities() {
+            addResult('=== TEST 2: CAPACIDADES DEL NAVEGADOR ===', 'info');
+            
+            // File API support
+            if (window.File && window.FileReader && window.FileList && window.Blob) {
+                addResult('✅ File API soportada', 'success');
+            } else {
+                addResult('❌ File API NO soportada', 'error');
+            }
+            
+            // Input file support
+            const testInput = document.createElement('input');
+            testInput.type = 'file';
+            if (testInput.type === 'file') {
+                addResult('✅ Input[type=file] soportado', 'success');
+            } else {
+                addResult('❌ Input[type=file] NO soportado', 'error');
+            }
+            
+            // Click events
+            if (typeof Event !== 'undefined') {
+                addResult('✅ Event constructor disponible', 'success');
+            } else {
+                addResult('❌ Event constructor NO disponible', 'error');
+            }
+            
+            return true;
+        }
+        
+        // Test 3: Probar click programático
+        function testProgrammaticClick() {
+            addResult('=== TEST 3: CLICK PROGRAMÁTICO ===', 'info');
+            
+            const input = document.getElementById('cartography-input');
+            const button = document.getElementById('upload-cartography-btn');
+            
+            if (!input || !button) {
+                addResult('❌ Elementos no disponibles para test', 'error');
+                return false;
+            }
+            
+            try {
+                // Test click en button
+                addResult('🖱️ Probando click en button...', 'info');
+                button.click();
+                addResult('✅ Button.click() ejecutado sin errores', 'success');
+                
+                // Test click en input
+                addResult('🖱️ Probando click en input...', 'info');
+                input.click();
+                addResult('✅ Input.click() ejecutado sin errores', 'success');
+                
+                return true;
+            } catch (error) {
+                addResult(`❌ Error en click: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        // Test 4: Probar event listeners
+        function testEventListeners() {
+            addResult('=== TEST 4: EVENT LISTENERS ===', 'info');
+            
+            const input = document.getElementById('cartography-input');
+            const button = document.getElementById('upload-cartography-btn');
+            
+            if (!input || !button) {
+                addResult('❌ Elementos no disponibles para test', 'error');
+                return false;
+            }
+            
+            try {
+                // Agregar listener temporal al button
+                let buttonClicked = false;
+                const buttonListener = () => {
+                    buttonClicked = true;
+                    addResult('🖱️ Event listener de button ejecutado', 'success');
+                };
+                
+                button.addEventListener('click', buttonListener);
+                addResult('✅ Event listener agregado al button', 'success');
+                
+                // Agregar listener temporal al input
+                let inputChanged = false;
+                const inputListener = () => {
+                    inputChanged = true;
+                    addResult('📁 Event listener de input ejecutado', 'success');
+                };
+                
+                input.addEventListener('change', inputListener);
+                addResult('✅ Event listener agregado al input', 'success');
+                
+                // Test programático del button listener
+                button.click();
+                if (buttonClicked) {
+                    addResult('✅ Button listener funciona correctamente', 'success');
+                } else {
+                    addResult('❌ Button listener NO se ejecutó', 'error');
+                }
+                
+                // Limpiar listeners
+                button.removeEventListener('click', buttonListener);
+                input.removeEventListener('change', inputListener);
+                addResult('🗑️ Listeners temporales removidos', 'info');
+                
+                return true;
+            } catch (error) {
+                addResult(`❌ Error en event listeners: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        // Test 5: Simular selección de archivo
+        function testFileSelection() {
+            addResult('=== TEST 5: SIMULACIÓN DE ARCHIVO ===', 'info');
+            
+            const input = document.getElementById('cartography-input');
+            
+            if (!input) {
+                addResult('❌ Input no disponible para test', 'error');
+                return false;
+            }
+            
+            try {
+                // Crear archivo de prueba
+                const testFile = new File(['{"test": "data"}'], 'test.geojson', {
+                    type: 'application/geo+json'
+                });
+                addResult(`📁 Archivo de prueba creado: ${testFile.name}`, 'success');
+                
+                // Simular selección usando DataTransfer
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(testFile);
+                input.files = dataTransfer.files;
+                
+                addResult(`📄 Archivo asignado: ${input.files.length} archivos`, 'success');
+                
+                // Disparar evento change
+                const changeEvent = new Event('change', { bubbles: true });
+                input.dispatchEvent(changeEvent);
+                addResult('✅ Evento change disparado', 'success');
+                
+                return true;
+            } catch (error) {
+                addResult(`❌ Error en simulación: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        // Test 6: Verificar restricciones de seguridad
+        function testSecurityRestrictions() {
+            addResult('=== TEST 6: RESTRICCIONES DE SEGURIDAD ===', 'info');
+            
+            // Verificar protocolo
+            addResult(`🔒 Protocolo: ${window.location.protocol}`, 'info');
+            if (window.location.protocol === 'file:') {
+                addResult('⚠️ Protocolo file: puede tener restricciones', 'warning');
+            }
+            
+            // Verificar origen
+            addResult(`🌐 Origen: ${window.location.origin}`, 'info');
+            
+            // Verificar si estamos en iframe
+            if (window !== window.top) {
+                addResult('⚠️ Ejecutando en iframe - posibles restricciones', 'warning');
+            } else {
+                addResult('✅ No en iframe', 'success');
+            }
+            
+            // Verificar user agent
+            addResult(`🔍 User Agent: ${navigator.userAgent.substring(0, 100)}...`, 'info');
+            
+            return true;
+        }
+        
+        // Función principal para ejecutar todos los tests
+        function runAllTests() {
+            clearResults();
+            addResult('🚀 INICIANDO DIAGNÓSTICO COMPLETO...', 'info');
+            
+            const tests = [
+                testDOMElements,
+                testBrowserCapabilities,
+                testProgrammaticClick,
+                testEventListeners,
+                testFileSelection,
+                testSecurityRestrictions
+            ];
+            
+            let allPassed = true;
+            
+            tests.forEach((test, index) => {
+                try {
+                    const result = test();
+                    if (!result) allPassed = false;
+                } catch (error) {
+                    addResult(`❌ Test ${index + 1} falló: ${error.message}`, 'error');
+                    allPassed = false;
+                }
+            });
+            
+            addResult('', 'info');
+            if (allPassed) {
+                addResult('🎉 TODOS LOS TESTS PASARON - El botón debería funcionar', 'success');
+            } else {
+                addResult('💥 ALGUNOS TESTS FALLARON - Revisar errores arriba', 'error');
+            }
+        }
+        
+        // Información del navegador
+        function showBrowserInfo() {
+            const browserInfo = document.getElementById('browser-info');
+            browserInfo.innerHTML = `
+                <div class="result info">Navegador: ${navigator.userAgent}</div>
+                <div class="result info">Platform: ${navigator.platform}</div>
+                <div class="result info">Idioma: ${navigator.language}</div>
+                <div class="result info">Cookies: ${navigator.cookieEnabled}</div>
+                <div class="result info">En línea: ${navigator.onLine}</div>
+                <div class="result info">URL: ${window.location.href}</div>
+            `;
+        }
+        
+        // Análisis de HTML
+        function analyzeHTML() {
+            const htmlAnalysis = document.getElementById('html-analysis');
+            const input = document.getElementById('cartography-input');
+            const button = document.getElementById('upload-cartography-btn');
+            
+            htmlAnalysis.innerHTML = `
+                <div class="result">Input HTML: ${input ? input.outerHTML : 'NO ENCONTRADO'}</div>
+                <div class="result">Button HTML: ${button ? button.outerHTML : 'NO ENCONTRADO'}</div>
+            `;
+        }
+        
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            addLog('🚀 Página cargada - Sistema de diagnóstico listo', 'success');
+            showBrowserInfo();
+            analyzeHTML();
+            
+            // Auto-ejecutar tests después de 1 segundo
+            setTimeout(() => {
+                addLog('⏰ Auto-ejecutando tests en 3 segundos...', 'warning');
+                setTimeout(runAllTests, 3000);
+            }, 1000);
+        });
+    </script>
+</body>
+</html> 

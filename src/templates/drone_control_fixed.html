@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drone Geo Analysis - Control Panel FIXED</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/leaflet.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+        :root {
+            --primary: #0F172A;
+            --secondary: #1E293B;
+            --accent: #3B82F6;
+            --accent-light: #60A5FA;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --danger: #EF4444;
+            --text-primary: #F8FAFC;
+            --text-secondary: #CBD5E1;
+            --text-muted: #94A3B8;
+            --border: #334155;
+            --bg-card: #1E293B;
+            --bg-input: #0F172A;
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .test-section {
+            background: var(--bg-card);
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        button {
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            margin: 5px;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        
+        button:disabled {
+            background: var(--border);
+            cursor: not-allowed;
+            transform: none;
+            opacity: 0.6;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+        
+        .log-output {
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            min-height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+        
+        .status.error {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Panel de Control de Drones - VERSIÓN CORREGIDA</h1>
+        
+        <div class="test-section">
+            <h2>📁 Test de Upload de Cartografía</h2>
+            
+            <div class="form-group">
+                <label for="cartography-input">
+                    <i class="fas fa-upload"></i> Cargar Mapa (GeoJSON):
+                </label>
+                <input type="file" id="cartography-input" accept=".geojson,.json" class="hidden">
+                <button id="upload-cartography-btn" type="button">
+                    <i class="fas fa-map-marked-alt"></i> Seleccionar Archivo
+                </button>
+            </div>
+            
+            <div class="form-group">
+                <label for="area-name-input">Nombre del Área:</label>
+                <input type="text" id="area-name-input" placeholder="Ej: Base Militar Norte">
+            </div>
+            
+            <div id="status-display"></div>
+            
+            <h3>🧪 Botones de Prueba:</h3>
+            <button onclick="testElementsExist()">🔍 Verificar Elementos</button>
+            <button onclick="testDirectClick()">👆 Click Directo</button>
+            <button onclick="testFileSelector()">📂 Abrir Selector</button>
+            <button onclick="testFullUpload()">🚀 Test Completo</button>
+            <button onclick="clearLog()">🗑️ Limpiar Log</button>
+            
+            <div class="log-output" id="log-output"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📊 Información del Sistema</h2>
+            <div id="system-info"></div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let logOutput = null;
+        let cartographyInput = null;
+        let uploadCartographyBtn = null;
+        let areaNameInput = null;
+        let statusDisplay = null;
+        
+        // Función de logging
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logLine = `[${timestamp}] ${message}`;
+            
+            if (logOutput) {
+                logOutput.innerHTML += logLine + '\n';
+                logOutput.scrollTop = logOutput.scrollHeight;
+            }
+            
+            console.log(logLine);
+            
+            if (type === 'error') {
+                console.error(logLine);
+            }
+        }
+        
+        function clearLog() {
+            if (logOutput) {
+                logOutput.innerHTML = '';
+            }
+            console.clear();
+        }
+        
+        function showStatus(message, type = 'success') {
+            if (statusDisplay) {
+                statusDisplay.innerHTML = `<div class="status ${type}">${message}</div>`;
+                setTimeout(() => {
+                    statusDisplay.innerHTML = '';
+                }, 5000);
+            }
+        }
+        
+        // Función para verificar que los elementos existen
+        function testElementsExist() {
+            log('=== VERIFICANDO ELEMENTOS ===');
+            
+            cartographyInput = document.getElementById('cartography-input');
+            uploadCartographyBtn = document.getElementById('upload-cartography-btn');
+            areaNameInput = document.getElementById('area-name-input');
+            
+            log(`cartography-input: ${cartographyInput ? '✅ Encontrado' : '❌ No encontrado'}`);
+            log(`upload-cartography-btn: ${uploadCartographyBtn ? '✅ Encontrado' : '❌ No encontrado'}`);
+            log(`area-name-input: ${areaNameInput ? '✅ Encontrado' : '❌ No encontrado'}`);
+            
+            if (cartographyInput) {
+                log(`  - Type: ${cartographyInput.type}`);
+                log(`  - Accept: ${cartographyInput.accept}`);
+                log(`  - Hidden: ${cartographyInput.classList.contains('hidden')}`);
+                log(`  - Display: ${window.getComputedStyle(cartographyInput).display}`);
+            }
+            
+            if (uploadCartographyBtn) {
+                log(`  - Type: ${uploadCartographyBtn.type}`);
+                log(`  - Disabled: ${uploadCartographyBtn.disabled}`);
+                log(`  - Visible: ${window.getComputedStyle(uploadCartographyBtn).display !== 'none'}`);
+            }
+            
+            return cartographyInput && uploadCartographyBtn;
+        }
+        
+        // Función para probar click directo en el botón
+        function testDirectClick() {
+            log('=== TEST CLICK DIRECTO ===');
+            
+            if (!uploadCartographyBtn) {
+                log('❌ Botón no disponible', 'error');
+                return;
+            }
+            
+            log('👆 Ejecutando click directo...');
+            try {
+                uploadCartographyBtn.click();
+                log('✅ Click ejecutado sin errores');
+            } catch (error) {
+                log(`❌ Error en click: ${error.message}`, 'error');
+            }
+        }
+        
+        // Función para probar el selector de archivos directamente
+        function testFileSelector() {
+            log('=== TEST SELECTOR DE ARCHIVOS ===');
+            
+            if (!cartographyInput) {
+                log('❌ Input no disponible', 'error');
+                return;
+            }
+            
+            log('📂 Abriendo selector de archivos...');
+            try {
+                cartographyInput.click();
+                log('✅ Selector abierto sin errores');
+            } catch (error) {
+                log(`❌ Error abriendo selector: ${error.message}`, 'error');
+            }
+        }
+        
+        // Función para test completo de upload
+        function testFullUpload() {
+            log('=== TEST COMPLETO DE UPLOAD ===');
+            
+            if (!testElementsExist()) {
+                log('❌ Elementos no disponibles para test', 'error');
+                return;
+            }
+            
+            // Crear un archivo de prueba
+            const testFile = new File(['{"test": true}'], 'test.geojson', {
+                type: 'application/geo+json'
+            });
+            
+            log('📁 Creando archivo de prueba...');
+            log(`  - Nombre: ${testFile.name}`);
+            log(`  - Tamaño: ${testFile.size} bytes`);
+            log(`  - Tipo: ${testFile.type}`);
+            
+            // Simular selección de archivo
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(testFile);
+            cartographyInput.files = dataTransfer.files;
+            
+            // Disparar evento change
+            const changeEvent = new Event('change', { bubbles: true });
+            cartographyInput.dispatchEvent(changeEvent);
+            
+            log('✅ Archivo de prueba asignado y evento change disparado');
+        }
+        
+        // Función para mostrar info del sistema
+        function showSystemInfo() {
+            const systemInfo = document.getElementById('system-info');
+            
+            const info = `
+                <strong>Navegador:</strong> ${navigator.userAgent}<br>
+                <strong>Platform:</strong> ${navigator.platform}<br>
+                <strong>Cookies habilitadas:</strong> ${navigator.cookieEnabled}<br>
+                <strong>Idioma:</strong> ${navigator.language}<br>
+                <strong>En línea:</strong> ${navigator.onLine}<br>
+                <strong>URL actual:</strong> ${window.location.href}<br>
+                <strong>Protocolo:</strong> ${window.location.protocol}<br>
+                <strong>Host:</strong> ${window.location.host}
+            `;
+            
+            systemInfo.innerHTML = info;
+        }
+        
+        // Función principal para manejar upload de cartografía
+        function handleCartographyUpload(file) {
+            log(`📤 Iniciando upload: ${file.name}`);
+            
+            const areaName = areaNameInput.value.trim() || file.name.replace(/\.[^/.]+$/, "");
+            
+            const formData = new FormData();
+            formData.append('cartography_file', file);
+            formData.append('area_name', areaName);
+            
+            // Mostrar estado de carga
+            uploadCartographyBtn.disabled = true;
+            uploadCartographyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando...';
+            showStatus('Subiendo archivo...', 'info');
+            
+            log('🌐 Enviando a servidor...');
+            
+            fetch('/api/cartography/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                log(`📡 Respuesta recibida: ${response.status} ${response.statusText}`);
+                return response.json();
+            })
+            .then(data => {
+                log(`📋 Datos: ${JSON.stringify(data)}`);
+                
+                if (data.success) {
+                    showStatus(`✅ Cartografía "${data.area_name}" cargada correctamente`, 'success');
+                    log(`✅ Upload exitoso: ${data.area_name}`);
+                    
+                    // Limpiar formulario
+                    areaNameInput.value = '';
+                    cartographyInput.value = '';
+                } else {
+                    showStatus(`❌ Error: ${data.error}`, 'error');
+                    log(`❌ Error en servidor: ${data.error}`, 'error');
+                }
+            })
+            .catch(error => {
+                const errorMsg = `Error de conexión: ${error.message}`;
+                showStatus(`❌ ${errorMsg}`, 'error');
+                log(`❌ ${errorMsg}`, 'error');
+            })
+            .finally(() => {
+                // Restaurar botón
+                uploadCartographyBtn.disabled = false;
+                uploadCartographyBtn.innerHTML = '<i class="fas fa-map-marked-alt"></i> Seleccionar Archivo';
+                log('🔄 Botón restaurado');
+            });
+        }
+        
+        // Inicialización cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 DOM Cargado - Inicializando sistema...');
+            
+            // Obtener referencias a elementos
+            logOutput = document.getElementById('log-output');
+            statusDisplay = document.getElementById('status-display');
+            
+            // Verificar elementos principales
+            if (!testElementsExist()) {
+                log('❌ Error crítico: Elementos no encontrados', 'error');
+                return;
+            }
+            
+            log('✅ Elementos principales encontrados');
+            
+            // Agregar event listener al botón de upload
+            uploadCartographyBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                log('🖱️ Click en botón de upload detectado');
+                
+                if (cartographyInput) {
+                    log('📂 Abriendo selector de archivos...');
+                    cartographyInput.click();
+                } else {
+                    log('❌ Input de archivo no disponible', 'error');
+                }
+            });
+            
+            // Agregar event listener al input de archivo
+            cartographyInput.addEventListener('change', function(e) {
+                log('📁 Cambio en input de archivo detectado');
+                
+                const file = e.target.files[0];
+                if (file) {
+                    log(`📄 Archivo seleccionado: ${file.name} (${file.size} bytes)`);
+                    handleCartographyUpload(file);
+                } else {
+                    log('⚠️ No se seleccionó ningún archivo');
+                }
+            });
+            
+            log('✅ Event listeners configurados');
+            
+            // Mostrar información del sistema
+            showSystemInfo();
+            
+            log('🎉 Inicialización completa - Sistema listo');
+            showStatus('✅ Sistema inicializado correctamente', 'success');
+        });
+        
+        // Funciones globales para testing
+        window.testElementsExist = testElementsExist;
+        window.testDirectClick = testDirectClick;
+        window.testFileSelector = testFileSelector;
+        window.testFullUpload = testFullUpload;
+        window.clearLog = clearLog;
+        
+        log('📝 Funciones globales de test registradas');
+    </script>
+</body>
+</html> 

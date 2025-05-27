@@ -21,6 +21,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Importar módulos internos
 from src.models.geo_analyzer import GeoAnalyzer
+from src.models.mission_planner import LLMMissionPlanner
 from src.utils.config import setup_logging
 from src.utils.helpers import get_image_metadata, save_analysis_results
 
@@ -51,6 +52,7 @@ if "OPENAI_API_KEY" not in os.environ:
 
 # Inicializar componentes
 analyzer = GeoAnalyzer()
+mission_planner = LLMMissionPlanner()
 
 # Objetos mock para pruebas
 class MockDroneController:
@@ -102,8 +104,48 @@ targets = {}
 
 @app.route('/')
 def index():
-    """Ruta principal que muestra la interfaz web."""
+    """Ruta principal que muestra la nueva interfaz moderna."""
+    return render_template('index.html')
+
+@app.route('/drone_control.html')
+def drone_control():
+    """Ruta para el panel de control completo de drones."""
     return render_template('drone_control.html')
+
+@app.route('/web_index.html')
+def web_index():
+    """Ruta para el análisis rápido."""
+    return render_template('web_index.html')
+
+@app.route('/test_upload.html')
+def test_upload():
+    """Ruta para la página de prueba del botón upload."""
+    return render_template('test_upload.html')
+
+@app.route('/drone_control_fixed.html')
+def drone_control_fixed():
+    """Ruta para la versión corregida del panel de control."""
+    return render_template('drone_control_fixed.html')
+
+@app.route('/debug_upload.html')
+def debug_upload():
+    """Ruta para el diagnóstico automatizado del botón upload."""
+    return render_template('debug_upload.html')
+
+@app.route('/test_function_order.html')
+def test_function_order():
+    """Ruta para el test de orden de funciones JavaScript."""
+    return render_template('test_function_order.html')
+
+@app.route('/test_llm_mission.html')
+def test_llm_mission():
+    """Ruta para el test de misiones LLM."""
+    return render_template('test_llm_mission.html')
+
+@app.route('/mission_instructions.html')
+def mission_instructions():
+    """Ruta para las instrucciones de misiones LLM."""
+    return render_template('mission_instructions.html')
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
@@ -294,6 +336,124 @@ def abort_mission():
         logger.error(f"Error al abortar misión: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
 
+# API para misiones con LLM
+@app.route('/api/missions/llm/create', methods=['POST'])
+def create_llm_mission():
+    """Crea una misión usando comandos en lenguaje natural con LLM."""
+    try:
+        data = request.json
+        natural_command = data.get('command')
+        area_name = data.get('area_name')
+        
+        if not natural_command:
+            return jsonify({'success': False, 'error': 'Comando no especificado'})
+        
+        # Crear misión usando LLM
+        mission = mission_planner.create_mission_from_command(natural_command, area_name)
+        
+        if mission:
+            # Validar seguridad
+            warnings = mission_planner.validate_mission_safety(mission)
+            mission['safety_warnings'] = warnings
+            
+            return jsonify({
+                'success': True, 
+                'mission': mission,
+                'safety_warnings': warnings
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Error creando misión con LLM'})
+            
+    except Exception as e:
+        logger.error(f"Error creando misión LLM: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/missions/llm/adaptive', methods=['POST'])
+def adaptive_mission_control():
+    """Control adaptativo de misión usando LLM."""
+    try:
+        data = request.json
+        mission_id = data.get('mission_id')
+        current_position = data.get('current_position', [40.416775, -3.703790])
+        situation_report = data.get('situation_report', '')
+        
+        if not mission_id:
+            return jsonify({'success': False, 'error': 'ID de misión no especificado'})
+        
+        # Obtener decisión del LLM
+        decision = mission_planner.adaptive_mission_control(
+            tuple(current_position), situation_report, mission_id
+        )
+        
+        return jsonify({'success': True, 'decision': decision})
+        
+    except Exception as e:
+        logger.error(f"Error en control adaptativo: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/cartography/upload', methods=['POST'])
+def upload_cartography():
+    """Sube y procesa archivos de cartografía."""
+    try:
+        if 'cartography_file' not in request.files:
+            return jsonify({'success': False, 'error': 'No se envió archivo de cartografía'})
+        
+        file = request.files['cartography_file']
+        area_name = request.form.get('area_name', 'area_sin_nombre')
+        
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'Nombre de archivo vacío'})
+        
+        # Guardar archivo temporalmente
+        temp_dir = tempfile.gettempdir()
+        temp_path = os.path.join(temp_dir, file.filename)
+        file.save(temp_path)
+        
+        # Cargar cartografía
+        success = mission_planner.load_cartography(temp_path, area_name)
+        
+        if success:
+            return jsonify({
+                'success': True, 
+                'message': f'Cartografía "{area_name}" cargada correctamente',
+                'area_name': area_name
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Error procesando cartografía'})
+            
+    except Exception as e:
+        logger.error(f"Error subiendo cartografía: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/cartography/areas', methods=['GET'])
+def get_loaded_areas():
+    """Obtiene las áreas de cartografía cargadas."""
+    try:
+        areas = []
+        for area_name, area_data in mission_planner.loaded_areas.items():
+            areas.append({
+                'name': area_name,
+                'boundaries_count': len(area_data.boundaries),
+                'poi_count': len(area_data.points_of_interest or [])
+            })
+        
+        return jsonify({'success': True, 'areas': areas})
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo áreas: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/missions/llm/list', methods=['GET'])
+def get_llm_missions():
+    """Obtiene lista de misiones LLM creadas."""
+    try:
+        missions = mission_planner.get_available_missions()
+        return jsonify({'success': True, 'missions': missions})
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo misiones LLM: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
 # API para geolocalización
 @app.route('/api/geo/reference/add', methods=['POST'])
 def add_reference():
@@ -472,8 +632,11 @@ def main():
     port = 5000
     
     logger.info(f"Iniciando servidor web en {host}:{port}")
-    print(f"Servidor iniciado en http://{host}:{port}")
-    print(f"Accede a través de: http://localhost:{port}")
+    print(f"🚀 Servidor iniciado en http://{host}:{port} (puerto interno del contenedor)")
+    print(f"🌐 Accede desde tu navegador en: http://localhost:5001")
+    print(f"🎮 Panel de Control: http://localhost:5001/drone_control.html")
+    print(f"⚡ Análisis Rápido: http://localhost:5001/web_index.html")
+    print(f"📱 Mapeo de puertos: localhost:5001 → contenedor:5000")
     
     # Usar waitress para producción
     serve(app, host=host, port=port)

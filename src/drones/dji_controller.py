@@ -27,6 +27,11 @@ class DJIDroneController(BaseDrone):
         self.flight_controller = None
         self.camera = None
         self.connected = False
+        # Coordenadas por defecto (Nueva York), pero se pueden actualizar dinámicamente
+        self.current_position = {
+            "latitude": 40.7128,
+            "longitude": -74.0060
+        }
         logger.info("Inicializado controlador de drones DJI")
     
     def connect(self) -> bool:
@@ -156,18 +161,24 @@ class DJIDroneController(BaseDrone):
             logger.error(f"Error al detener stream de video: {str(e)}")
             return False
     
+    def update_position(self, latitude: float, longitude: float):
+        """Actualiza la posición actual del dron DJI."""
+        self.current_position["latitude"] = latitude
+        self.current_position["longitude"] = longitude
+        logger.info(f"🚁 DJI Drone reposicionado a: {latitude:.6f}, {longitude:.6f}")
+
     def get_telemetry(self) -> Dict[str, Any]:
         """Obtiene datos telemétricos del dron."""
         try:
             if not self.connected:
                 raise ConnectionError("Dron no conectado")
             
-            # Simulación de datos de telemetría
+            # Simulación de datos de telemetría usando posición dinámica
             telemetry = {
                 "battery": 75,  # Porcentaje de batería
                 "gps": {
-                    "latitude": 40.7128,  # Ejemplo de coordenadas
-                    "longitude": -74.0060,
+                    "latitude": self.current_position["latitude"],  # Usar posición dinámica
+                    "longitude": self.current_position["longitude"],  # Usar posición dinámica
                     "satellites": 8,  # Número de satélites conectados
                     "signal_quality": 4  # Calidad de señal GPS (0-5)
                 },

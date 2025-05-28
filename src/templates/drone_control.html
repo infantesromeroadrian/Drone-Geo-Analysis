@@ -1476,6 +1476,36 @@
                             alert(`Cartografía "${data.area_name}" cargada correctamente`);
                             areaNameInput.value = '';
                             cartographyInput.value = '';
+                            
+                            // ✅ NUEVO: Reposicionar dron y centrar mapa en nuevas coordenadas
+                            if (data.center_coordinates) {
+                                const newLat = data.center_coordinates.latitude;
+                                const newLng = data.center_coordinates.longitude;
+                                
+                                console.log(`🗺️ Reposicionando mapa a: ${newLat}, ${newLng}`);
+                                
+                                // Mover marcador del dron
+                                if (droneMarker) {
+                                    droneMarker.setLatLng([newLat, newLng]);
+                                    console.log(`🚁 Dron reposicionado a: ${newLat}, ${newLng}`);
+                                }
+                                
+                                // Centrar mapa en nuevas coordenadas
+                                if (map) {
+                                    map.setView([newLat, newLng], 15);
+                                    console.log(`🎯 Mapa centrado en: ${newLat}, ${newLng}`);
+                                }
+                                
+                                // Actualizar telemetría mock para reflejar nueva posición
+                                updateDronePosition({
+                                    latitude: newLat,
+                                    longitude: newLng
+                                });
+                                
+                                // Mostrar notificación de éxito con coordenadas
+                                alert(`✅ Área "${data.area_name}" cargada\n🚁 Dron reposicionado a:\nLat: ${newLat.toFixed(6)}\nLng: ${newLng.toFixed(6)}`);
+                            }
+                            
                             // ACTUALIZAR LISTA DE ÁREAS DESPUÉS DEL UPLOAD
                             loadAreas();
                         } else {

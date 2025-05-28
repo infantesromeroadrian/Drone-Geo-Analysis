@@ -110,6 +110,36 @@ class LLMMissionPlanner:
             points_of_interest=points_of_interest
         )
     
+    def get_area_center_coordinates(self, area_name: str) -> Optional[Tuple[float, float]]:
+        """
+        Obtiene las coordenadas del centro de un área cargada.
+        
+        Args:
+            area_name: Nombre del área
+            
+        Returns:
+            Tuple[float, float]: (latitud, longitud) del centro o None si no existe
+        """
+        if area_name not in self.loaded_areas:
+            return None
+            
+        area = self.loaded_areas[area_name]
+        
+        if not area.boundaries:
+            # Si no hay boundaries, usar el primer POI
+            if area.points_of_interest:
+                return area.points_of_interest[0]['coordinates']
+            return None
+        
+        # Calcular centro de los boundaries
+        lats = [coord[0] for coord in area.boundaries]
+        lngs = [coord[1] for coord in area.boundaries]
+        
+        center_lat = sum(lats) / len(lats)
+        center_lng = sum(lngs) / len(lngs)
+        
+        return (center_lat, center_lng)
+    
     def create_mission_from_command(self, natural_command: str, area_name: str = None) -> Dict:
         """
         Crea una misión a partir de un comando en lenguaje natural.
@@ -124,18 +154,44 @@ class LLMMissionPlanner:
         try:
             # Obtener información del área si está disponible
             area_info = ""
+            center_coordinates = None
+            boundary_coordinates = None
+            
             if area_name and area_name in self.loaded_areas:
                 area = self.loaded_areas[area_name]
-                area_info = f"""
-                Área disponible: {area.name}
-                Límites: {area.boundaries}
-                Puntos de interés: {area.points_of_interest}
+                center_coordinates = self.get_area_center_coordinates(area_name)
+                
+                if center_coordinates:
+                    area_info = f"""
+                ÁREA GEOGRÁFICA ESPECÍFICA: {area.name}
+                
+                COORDENADAS DEL CENTRO: 
+                - Latitud: {center_coordinates[0]:.6f}
+                - Longitud: {center_coordinates[1]:.6f}
+                
+                LÍMITES DEL ÁREA: {area.boundaries}
+                
+                PUNTOS DE INTERÉS:
+                {area.points_of_interest}
+                
+                INSTRUCCIONES IMPORTANTES:
+                - TODOS los waypoints deben estar dentro o cerca de estas coordenadas específicas
+                - USA las coordenadas del centro como punto de referencia principal
+                - NO uses coordenadas genéricas o de otras ubicaciones
+                - Genera waypoints en un radio máximo de 2km desde el centro
                 """
             
-            # Prompt para el LLM
+            # Prompt mejorado para el LLM
             system_prompt = """
             Eres un experto piloto de drones militar con conocimientos avanzados en planificación de misiones.
             Tu tarea es convertir comandos en lenguaje natural en misiones de vuelo específicas.
+            
+            REGLAS CRÍTICAS PARA COORDENADAS:
+            1. Si se proporciona un área geográfica específica, DEBES usar exclusivamente esas coordenadas
+            2. NUNCA uses coordenadas genéricas como Madrid (40.416775, -3.703790)
+            3. Los waypoints deben estar dentro del área especificada
+            4. Usa las coordenadas del centro como referencia principal
+            5. Genera waypoints realistas para la zona geográfica indicada
             
             Debes generar waypoints con coordenadas GPS precisas, altitudes apropiadas y acciones específicas.
             Considera factores como seguridad, eficiencia de combustible, cobertura del área y objetivos tácticos.
@@ -156,7 +212,8 @@ class LLMMissionPlanner:
                     }
                 ],
                 "safety_considerations": ["string"],
-                "success_criteria": ["string"]
+                "success_criteria": ["string"],
+                "area_used": "string"
             }
             
             Acciones disponibles: navigate, hover, scan, photograph, patrol, land, takeoff, search, monitor
@@ -165,9 +222,9 @@ class LLMMissionPlanner:
             user_prompt = f"""
             Comando: {natural_command}
             
-            {area_info}
+            {area_info if area_info else "ÁREA: No se especificó área geográfica - usa coordenadas genéricas apropiadas"}
             
-            Genera una misión detallada para este comando.
+            Genera una misión detallada para este comando usando las coordenadas específicas del área.
             """
             
             response = self.client.chat.completions.create(
@@ -187,6 +244,14 @@ class LLMMissionPlanner:
             mission_data['created_at'] = datetime.now().isoformat()
             mission_data['status'] = 'planned'
             mission_data['area_name'] = area_name
+            mission_data['original_command'] = natural_command
+            
+            # Añadir coordenadas del centro si están disponibles
+            if center_coordinates:
+                mission_data['area_center'] = {
+                    'latitude': center_coordinates[0],
+                    'longitude': center_coordinates[1]
+                }
             
             # Guardar misión
             mission_file = os.path.join(self.missions_dir, f"mission_{mission_data['id']}.json")

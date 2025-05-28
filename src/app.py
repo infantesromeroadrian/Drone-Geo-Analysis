@@ -63,18 +63,32 @@ mission_planner = LLMMissionPlanner()
 
 # Objetos mock para pruebas
 class MockDroneController:
+    def __init__(self):
+        # Coordenadas por defecto (Madrid), pero se pueden actualizar dinámicamente
+        self.current_position = {
+            "latitude": 40.416775,
+            "longitude": -3.703790
+        }
+    
     def connect(self): return True
     def disconnect(self): return True
     def take_off(self, altitude): return True
     def land(self): return True
     def start_video_stream(self): return "mock://stream"
     def stop_video_stream(self): return True
+    
+    def update_position(self, latitude: float, longitude: float):
+        """Actualiza la posición actual del dron mock."""
+        self.current_position["latitude"] = latitude
+        self.current_position["longitude"] = longitude
+        logger.info(f"🚁 MockDrone reposicionado a: {latitude:.6f}, {longitude:.6f}")
+    
     def get_telemetry(self): 
         return {
             "battery": 75,
             "gps": {
-                "latitude": 40.416775,
-                "longitude": -3.703790,
+                "latitude": self.current_position["latitude"],
+                "longitude": self.current_position["longitude"],
                 "satellites": 8,
                 "signal_quality": 4
             },
@@ -295,8 +309,8 @@ def connect_drone():
             return jsonify({
                 'success': True,
                 'position': {
-                    'latitude': 40.416775,
-                    'longitude': -3.703790
+                    'latitude': drone_controller.current_position["latitude"],
+                    'longitude': drone_controller.current_position["longitude"]
                 }
             })
         else:
@@ -487,11 +501,27 @@ def upload_cartography():
         success = mission_planner.load_cartography(temp_path, area_name)
         
         if success:
-            return jsonify({
+            # Obtener coordenadas del centro para reposicionar el dron
+            center_coordinates = mission_planner.get_area_center_coordinates(area_name)
+            
+            response_data = {
                 'success': True, 
                 'message': f'Cartografía "{area_name}" cargada correctamente',
                 'area_name': area_name
-            })
+            }
+            
+            # Agregar coordenadas del centro si están disponibles
+            if center_coordinates:
+                response_data['center_coordinates'] = {
+                    'latitude': center_coordinates[0],
+                    'longitude': center_coordinates[1]
+                }
+                logger.info(f"Área '{area_name}' cargada con centro en: {center_coordinates[0]:.6f}, {center_coordinates[1]:.6f}")
+                
+                # Actualizar posición del mock drone
+                drone_controller.update_position(center_coordinates[0], center_coordinates[1])
+            
+            return jsonify(response_data)
         else:
             return jsonify({'success': False, 'error': 'Error procesando cartografía'})
             

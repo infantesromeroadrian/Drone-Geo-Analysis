@@ -9,5 +9,5 @@ services:
     volumes:
       - ./:/app
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-    command: python -m pytest 
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-test_key}
+    command: python -m pytest tests/ -v 

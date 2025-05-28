@@ -8,15 +8,12 @@ Gestiona la configuración de logging y otras utilidades.
 import os
 import logging
 from datetime import datetime
+from .helpers import get_logs_directory
 
 def setup_logging():
     """Configura el sistema de logging para la aplicación."""
-    # Crear directorio de logs si no existe
-    logs_dir = os.path.join(os.path.dirname(os.path.dirname(
-        os.path.dirname(os.path.abspath(__file__)))), "logs")
-    
-    if not os.path.exists(logs_dir):
-        os.makedirs(logs_dir)
+    # Usar la función de utilidad para obtener el directorio de logs
+    logs_dir = get_logs_directory()
     
     # Nombre del archivo de log con timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

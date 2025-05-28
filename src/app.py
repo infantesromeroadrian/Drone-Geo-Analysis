@@ -15,6 +15,7 @@ from flask import Flask, render_template, request, jsonify, send_from_directory
 from dotenv import load_dotenv
 import tempfile
 import time
+from typing import Dict, Any
 
 # Agregar la ruta del proyecto al PYTHONPATH
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -23,14 +24,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.models.geo_analyzer import GeoAnalyzer
 from src.models.mission_planner import LLMMissionPlanner
 from src.utils.config import setup_logging
-from src.utils.helpers import get_image_metadata, save_analysis_results
-
-# Importaciones que causan problemas - COMENTADAS para pruebas
-# from src.drones.dji_controller import DJIDroneController
-# from src.processors.video_processor import VideoProcessor
-# from src.processors.change_detector import ChangeDetector
-# from src.geo.geo_triangulation import GeoTriangulation
-# from src.geo.geo_correlator import GeoCorrelator
+from src.utils.helpers import get_image_metadata, save_analysis_results_with_filename
 
 # Configurar aplicación Flask
 app = Flask(__name__, 
@@ -40,7 +34,7 @@ app = Flask(__name__,
 # Cargar variables de entorno
 load_dotenv()
 
-# Configurar logging
+# Configurar logging ANTES de las importaciones condicionales
 setup_logging()
 logger = logging.getLogger(__name__)
 
@@ -49,6 +43,19 @@ if "OPENAI_API_KEY" not in os.environ:
     logger.error("No se encontró OPENAI_API_KEY en las variables de entorno")
     print("Error: Se requiere una API key de OpenAI. Agrégala al archivo .env")
     sys.exit(1)
+
+# Importaciones condicionales - usar módulos reales si están disponibles, sino usar mocks
+try:
+    from src.drones.dji_controller import DJIDroneController
+    from src.processors.video_processor import VideoProcessor
+    from src.processors.change_detector import ChangeDetector
+    from src.geo.geo_triangulation import GeoTriangulation
+    from src.geo.geo_correlator import GeoCorrelator
+    USE_REAL_MODULES = True
+    logger.info("Módulos reales importados correctamente")
+except ImportError as e:
+    logger.warning(f"No se pudieron importar módulos reales: {e}. Usando mocks.")
+    USE_REAL_MODULES = False
 
 # Inicializar componentes
 analyzer = GeoAnalyzer()
@@ -91,16 +98,83 @@ class MockProcessor:
     def stop_processing(self): return True
 
 # Usar objetos mock en lugar de implementaciones reales
-drone_controller = MockDroneController()
-video_processor = MockProcessor()
-change_detector = MockProcessor()
-geo_triangulation = MockProcessor()
-geo_correlator = MockProcessor()
+# drone_controller = MockDroneController()
+# video_processor = MockProcessor()
+# change_detector = MockProcessor()
+# geo_triangulation = MockProcessor()
+# geo_correlator = MockProcessor()
+
+# Inicializar componentes según disponibilidad
+if USE_REAL_MODULES:
+    try:
+        drone_controller = DJIDroneController()
+        video_processor = VideoProcessor()
+        change_detector = ChangeDetector()
+        geo_triangulation = GeoTriangulation()
+        geo_correlator = GeoCorrelator()
+        logger.info("Módulos reales inicializados correctamente")
+    except Exception as e:
+        logger.error(f"Error inicializando módulos reales: {e}. Usando mocks como fallback.")
+        drone_controller = MockDroneController()
+        video_processor = MockProcessor()
+        change_detector = MockProcessor()
+        geo_triangulation = MockProcessor()
+        geo_correlator = MockProcessor()
+else:
+    # Usar objetos mock
+    drone_controller = MockDroneController()
+    video_processor = MockProcessor()
+    change_detector = MockProcessor()
+    geo_triangulation = MockProcessor()
+    geo_correlator = MockProcessor()
+    logger.info("Usando objetos mock para módulos no disponibles")
 
 # Variables globales
-current_reference_image = None
-reference_images = {}
-targets = {}
+# current_reference_image = None
+# reference_images = {}
+# targets = {}
+
+class GeolocationManager:
+    """Gestiona el estado de geolocalización, referencias e imágenes."""
+    
+    def __init__(self):
+        """Inicializa el gestor de geolocalización."""
+        self.current_reference_image = None
+        self.reference_images = {}
+        self.targets = {}
+        logger.info("Gestor de geolocalización inicializado")
+    
+    def add_reference_image(self, drone_telemetry: Dict[str, Any]) -> str:
+        """Añade una imagen de referencia."""
+        ref_id = f"ref_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        self.reference_images[ref_id] = {
+            'timestamp': datetime.now().isoformat(),
+            'location': drone_telemetry.get('gps', {})
+        }
+        self.current_reference_image = ref_id
+        logger.info(f"Imagen de referencia añadida: {ref_id}")
+        return ref_id
+    
+    def create_target(self) -> str:
+        """Crea un nuevo objetivo para triangulación."""
+        target_id = f"target_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        self.targets[target_id] = {
+            'captures': [],
+            'timestamp': datetime.now().isoformat()
+        }
+        logger.info(f"Objetivo creado: {target_id}")
+        return target_id
+    
+    def get_reference_images(self) -> Dict[str, Any]:
+        """Obtiene todas las imágenes de referencia."""
+        return self.reference_images
+    
+    def get_targets(self) -> Dict[str, Any]:
+        """Obtiene todos los objetivos."""
+        return self.targets
+
+# Inicializar gestor de geolocalización
+geo_manager = GeolocationManager()
 
 @app.route('/')
 def index():
@@ -191,7 +265,7 @@ def analyze():
         # Guardar resultados
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"analysis_{timestamp}.json"
-        save_path = save_analysis_results(results, filename)
+        save_path = save_analysis_results_with_filename(results, filename)
         
         # Devolver resultados como JSON
         return jsonify({
@@ -459,17 +533,8 @@ def get_llm_missions():
 def add_reference():
     """Añade una imagen de referencia para detección de cambios."""
     try:
-        global current_reference_image, reference_images
-        
-        # En un caso real, se capturaría una imagen del dron
-        # Simulamos para demo
-        ref_id = f"ref_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-        reference_images[ref_id] = {
-            'timestamp': datetime.now().isoformat(),
-            'location': drone_controller.get_telemetry()['gps']
-        }
-        current_reference_image = ref_id
-        
+        drone_telemetry = drone_controller.get_telemetry()
+        ref_id = geo_manager.add_reference_image(drone_telemetry)
         return jsonify({'success': True, 'reference_id': ref_id})
     except Exception as e:
         logger.error(f"Error al añadir referencia: {str(e)}")
@@ -496,16 +561,7 @@ def detect_changes():
 def create_target():
     """Crea un nuevo objetivo para triangulación."""
     try:
-        global targets
-        
-        # En un caso real, se procesaría la imagen del dron
-        # Simulamos para demo
-        target_id = f"target_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-        targets[target_id] = {
-            'captures': [],
-            'timestamp': datetime.now().isoformat()
-        }
-        
+        target_id = geo_manager.create_target()
         return jsonify({'success': True, 'target_id': target_id})
     except Exception as e:
         logger.error(f"Error al crear objetivo: {str(e)}")

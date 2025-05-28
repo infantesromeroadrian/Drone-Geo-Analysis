@@ -15,6 +15,11 @@ from dataclasses import dataclass
 import geojson
 import math
 
+# Importar funciones de utilidad para rutas
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.helpers import get_missions_directory, get_project_root
+
 @dataclass
 class Waypoint:
     """Clase para representar un waypoint de la misión."""
@@ -39,13 +44,12 @@ class LLMMissionPlanner:
     def __init__(self):
         """Inicializa el planificador."""
         self.client = openai.OpenAI()
-        self.missions_dir = "missions"
-        self.cartography_dir = "cartography"
+        self.missions_dir = get_missions_directory()
+        self.cartography_dir = os.path.join(get_project_root(), "cartography")
         self.current_mission = None
         self.loaded_areas = {}
         
-        # Crear directorios si no existen
-        os.makedirs(self.missions_dir, exist_ok=True)
+        # Crear directorio de cartografía si no existe
         os.makedirs(self.cartography_dir, exist_ok=True)
     
     def load_cartography(self, file_path: str, area_name: str) -> bool:

@@ -5,7 +5,7 @@ Módulo que implementa el modelo de análisis geográfico de imágenes.
 """
 
 import logging
-import openai
+from openai import OpenAI
 from typing import Dict, Any, List, Optional
 
 from src.utils.config import get_openai_config
@@ -21,7 +21,7 @@ class GeoAnalyzer:
     def __init__(self):
         """Inicializa el analizador geográfico."""
         self.config = get_openai_config()
-        openai.api_key = self.config["api_key"]
+        self.client = OpenAI(api_key=self.config["api_key"])
         logger.info("Inicializado el analizador geográfico")
         
     def analyze_image(self, base64_image: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
@@ -44,8 +44,8 @@ class GeoAnalyzer:
             # Construir el mensaje del usuario
             user_prompt = self._build_user_prompt(metadata)
             
-            # Crear la solicitud a la API
-            response = openai.ChatCompletion.create(
+            # Crear la solicitud a la API usando la nueva versión
+            response = self.client.chat.completions.create(
                 model=self.config["model"],
                 messages=[
                     {"role": "system", "content": system_prompt},

@@ -17,7 +17,12 @@ from src.utils.helpers import (
     encode_image_to_base64,
     get_image_metadata,
     format_geo_results,
-    save_analysis_results
+    save_analysis_results,
+    save_analysis_results_with_filename,
+    get_project_root,
+    get_results_directory,
+    get_logs_directory,
+    get_missions_directory
 )
 
 # Fixture para crear un archivo de imagen temporal para pruebas
@@ -148,4 +153,72 @@ def test_save_analysis_results_error(mock_file, mock_makedirs, mock_exists):
     mock_file.assert_called_once()
     
     # Verificar que la ruta de salida es vacía debido al error
-    assert output_path == "" 
+    assert output_path == ""
+
+# Tests para save_analysis_results_with_filename
+@patch("os.path.exists")
+@patch("os.makedirs")
+@patch("builtins.open", new_callable=mock_open)
+def test_save_analysis_results_with_filename_success(mock_file, mock_makedirs, mock_exists):
+    """Prueba el guardado exitoso de resultados con nombre específico."""
+    mock_exists.return_value = False
+    
+    results = {"test": "data"}
+    filename = "test_analysis.json"
+    
+    output_path = save_analysis_results_with_filename(results, filename)
+    
+    # Verificar que se creó el directorio de resultados
+    mock_makedirs.assert_called_once()
+    
+    # Verificar que se escribió el archivo
+    mock_file.assert_called_once()
+    
+    # Verificar que la ruta de salida contiene el nombre especificado
+    assert filename in output_path
+
+# Tests para funciones de utilidad de rutas
+def test_get_project_root():
+    """Prueba que get_project_root devuelve una ruta válida."""
+    root = get_project_root()
+    assert isinstance(root, str)
+    assert os.path.isabs(root)  # Debe ser una ruta absoluta
+
+@patch("os.makedirs")
+@patch("os.path.exists")
+def test_get_results_directory(mock_exists, mock_makedirs):
+    """Prueba que get_results_directory crea el directorio si no existe."""
+    mock_exists.return_value = False
+    
+    results_dir = get_results_directory()
+    
+    # Verificar que se llamó makedirs
+    mock_makedirs.assert_called_once()
+    assert isinstance(results_dir, str)
+    assert "results" in results_dir
+
+@patch("os.makedirs")
+@patch("os.path.exists")
+def test_get_logs_directory(mock_exists, mock_makedirs):
+    """Prueba que get_logs_directory crea el directorio si no existe."""
+    mock_exists.return_value = False
+    
+    logs_dir = get_logs_directory()
+    
+    # Verificar que se llamó makedirs
+    mock_makedirs.assert_called_once()
+    assert isinstance(logs_dir, str)
+    assert "logs" in logs_dir
+
+@patch("os.makedirs")
+@patch("os.path.exists")
+def test_get_missions_directory(mock_exists, mock_makedirs):
+    """Prueba que get_missions_directory crea el directorio si no existe."""
+    mock_exists.return_value = False
+    
+    missions_dir = get_missions_directory()
+    
+    # Verificar que se llamó makedirs
+    mock_makedirs.assert_called_once()
+    assert isinstance(missions_dir, str)
+    assert "missions" in missions_dir 

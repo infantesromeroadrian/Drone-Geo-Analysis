@@ -13,6 +13,55 @@ from PIL import Image
 
 logger = logging.getLogger(__name__)
 
+def get_project_root() -> str:
+    """
+    Obtiene la ruta raíz del proyecto de forma confiable.
+    
+    Returns:
+        Ruta absoluta del directorio raíz del proyecto
+    """
+    # Obtener el directorio del archivo actual (helpers.py está en src/utils/)
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    # Subir dos niveles: utils -> src -> proyecto
+    project_root = os.path.dirname(os.path.dirname(current_dir))
+    return project_root
+
+def get_results_directory() -> str:
+    """
+    Obtiene el directorio de resultados, creándolo si no existe.
+    
+    Returns:
+        Ruta absoluta del directorio de resultados
+    """
+    results_dir = os.path.join(get_project_root(), "results")
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir)
+    return results_dir
+
+def get_logs_directory() -> str:
+    """
+    Obtiene el directorio de logs, creándolo si no existe.
+    
+    Returns:
+        Ruta absoluta del directorio de logs
+    """
+    logs_dir = os.path.join(get_project_root(), "logs")
+    if not os.path.exists(logs_dir):
+        os.makedirs(logs_dir)
+    return logs_dir
+
+def get_missions_directory() -> str:
+    """
+    Obtiene el directorio de misiones, creándolo si no existe.
+    
+    Returns:
+        Ruta absoluta del directorio de misiones
+    """
+    missions_dir = os.path.join(get_project_root(), "missions")
+    if not os.path.exists(missions_dir):
+        os.makedirs(missions_dir)
+    return missions_dir
+
 def encode_image_to_base64(image_path: str) -> Optional[str]:
     """
     Convierte una imagen a formato base64 para enviar a la API.
@@ -103,14 +152,37 @@ def save_analysis_results(results: Dict[str, Any], image_path: str) -> str:
         base_name = os.path.splitext(filename)[0]
         
         # Crear directorio de resultados si no existe
-        results_dir = os.path.join(os.path.dirname(os.path.dirname(
-            os.path.dirname(os.path.abspath(__file__)))), "results")
-        
-        if not os.path.exists(results_dir):
-            os.makedirs(results_dir)
+        results_dir = get_results_directory()
         
         # Guardar resultados
         output_path = os.path.join(results_dir, f"{base_name}_analysis.json")
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(results, f, ensure_ascii=False, indent=4)
+            
+        logger.info(f"Resultados guardados en {output_path}")
+        return output_path
+        
+    except Exception as e:
+        logger.error(f"Error al guardar resultados: {str(e)}")
+        return ""
+
+def save_analysis_results_with_filename(results: Dict[str, Any], filename: str) -> str:
+    """
+    Guarda los resultados del análisis en un archivo JSON con nombre específico.
+    
+    Args:
+        results: Resultados del análisis
+        filename: Nombre del archivo JSON a crear
+        
+    Returns:
+        Ruta del archivo JSON generado
+    """
+    try:
+        # Crear directorio de resultados si no existe
+        results_dir = get_results_directory()
+        
+        # Guardar resultados
+        output_path = os.path.join(results_dir, filename)
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(results, f, ensure_ascii=False, indent=4)
             

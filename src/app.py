@@ -108,7 +108,7 @@ class MockProcessor:
 if USE_REAL_MODULES:
     try:
         drone_controller = DJIDroneController()
-        video_processor = VideoProcessor()
+        video_processor = VideoProcessor(analyzer)
         change_detector = ChangeDetector()
         geo_triangulation = GeoTriangulation()
         geo_correlator = GeoCorrelator()
@@ -689,10 +689,10 @@ def main():
     
     logger.info(f"Iniciando servidor web en {host}:{port}")
     print(f"🚀 Servidor iniciado en http://{host}:{port} (puerto interno del contenedor)")
-    print(f"🌐 Accede desde tu navegador en: http://localhost:5001")
-    print(f"🎮 Panel de Control: http://localhost:5001/drone_control.html")
-    print(f"⚡ Análisis Rápido: http://localhost:5001/web_index.html")
-    print(f"📱 Mapeo de puertos: localhost:5001 → contenedor:5000")
+    print(f"🌐 Accede desde tu navegador en: http://localhost:4001")
+    print(f"🎮 Panel de Control: http://localhost:4001/drone_control.html")
+    print(f"⚡ Análisis Rápido: http://localhost:4001/web_index.html")
+    print(f"📱 Mapeo de puertos: localhost:4001 → contenedor:5000")
     
     # Usar waitress para producción
     serve(app, host=host, port=port)

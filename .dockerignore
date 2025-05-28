@@ -39,7 +39,19 @@ ENV/
 # Archivos específicos de IDEs
 .idea/
 .vscode/
+.cursor/
 *.swp
 *.swo
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# OneDrive specific files and directories that can cause issues
+desktop.ini
+.thumbnails/
+.tmp/
+~*
+
+# Windows specific files
+*~
+*.tmp
+*.bak 

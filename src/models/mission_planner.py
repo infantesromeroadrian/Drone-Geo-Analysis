@@ -8,6 +8,8 @@ Permite crear misiones inteligentes usando LLM para control de drones.
 import json
 import os
 import uuid
+import re
+import logging
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 import openai
@@ -19,6 +21,67 @@ import math
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.helpers import get_missions_directory, get_project_root
+
+# Configurar logger
+logger = logging.getLogger(__name__)
+
+def extract_json_from_response(response_content: str) -> Dict:
+    """
+    Extrae y parsea JSON de una respuesta de LLM de manera robusta.
+    
+    Args:
+        response_content: Contenido de la respuesta del LLM
+        
+    Returns:
+        Dict: JSON parseado
+        
+    Raises:
+        ValueError: Si no se puede extraer JSON válido
+    """
+    try:
+        # Intentar parsear directamente
+        return json.loads(response_content.strip())
+    except json.JSONDecodeError:
+        pass
+    
+    try:
+        # Buscar JSON envuelto en bloques de código markdown
+        json_match = re.search(r'```json\s*([\s\S]*?)\s*```', response_content, re.IGNORECASE)
+        if json_match:
+            json_content = json_match.group(1).strip()
+            logger.info("JSON encontrado en bloque de código markdown")
+            return json.loads(json_content)
+    except json.JSONDecodeError as e:
+        logger.error(f"Error parseando JSON desde markdown: {e}")
+        pass
+    
+    try:
+        # Buscar JSON entre llaves, ignorando texto antes y después
+        json_match = re.search(r'({[\s\S]*})', response_content)
+        if json_match:
+            json_content = json_match.group(1).strip()
+            logger.info("JSON encontrado usando regex de llaves")
+            return json.loads(json_content)
+    except json.JSONDecodeError as e:
+        logger.error(f"Error parseando JSON desde regex: {e}")
+        pass
+    
+    try:
+        # Buscar cualquier cosa que parezca JSON (comenzando con { y terminando con })
+        start_idx = response_content.find('{')
+        end_idx = response_content.rfind('}')
+        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+            json_content = response_content[start_idx:end_idx+1]
+            logger.info("JSON encontrado usando índices de llaves")
+            return json.loads(json_content)
+    except json.JSONDecodeError as e:
+        logger.error(f"Error parseando JSON desde índices: {e}")
+        pass
+    
+    # Si todo falla, log el contenido completo para debug
+    logger.error(f"No se pudo extraer JSON válido de la respuesta. Contenido completo:")
+    logger.error(f"'{response_content}'")
+    raise ValueError(f"No se pudo extraer JSON válido de la respuesta del LLM")
 
 @dataclass
 class Waypoint:
@@ -237,7 +300,7 @@ class LLMMissionPlanner:
             )
             
             # Parsear respuesta JSON
-            mission_data = json.loads(response.choices[0].message.content)
+            mission_data = extract_json_from_response(response.choices[0].message.content)
             
             # Añadir metadatos
             mission_data['id'] = str(uuid.uuid4())
@@ -317,7 +380,7 @@ class LLMMissionPlanner:
                 temperature=0.2
             )
             
-            return json.loads(response.choices[0].message.content)
+            return extract_json_from_response(response.choices[0].message.content)
             
         except Exception as e:
             print(f"Error en control adaptativo: {e}")

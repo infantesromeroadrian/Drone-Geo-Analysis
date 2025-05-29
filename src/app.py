@@ -205,31 +205,6 @@ def web_index():
     """Ruta para el análisis rápido."""
     return render_template('web_index.html')
 
-@app.route('/test_upload.html')
-def test_upload():
-    """Ruta para la página de prueba del botón upload."""
-    return render_template('test_upload.html')
-
-@app.route('/drone_control_fixed.html')
-def drone_control_fixed():
-    """Ruta para la versión corregida del panel de control."""
-    return render_template('drone_control_fixed.html')
-
-@app.route('/debug_upload.html')
-def debug_upload():
-    """Ruta para el diagnóstico automatizado del botón upload."""
-    return render_template('debug_upload.html')
-
-@app.route('/test_function_order.html')
-def test_function_order():
-    """Ruta para el test de orden de funciones JavaScript."""
-    return render_template('test_function_order.html')
-
-@app.route('/test_llm_mission.html')
-def test_llm_mission():
-    """Ruta para el test de misiones LLM."""
-    return render_template('test_llm_mission.html')
-
 @app.route('/mission_instructions.html')
 def mission_instructions():
     """Ruta para las instrucciones de misiones LLM."""

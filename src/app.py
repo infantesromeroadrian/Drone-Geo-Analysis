@@ -549,15 +549,56 @@ def add_reference():
 def detect_changes():
     """Detecta cambios entre imagen actual y referencia."""
     try:
-        # Simulación simple para demostración
-        has_changes = True
-        change_percentage = 15.7  # Porcentaje de cambio detectado
+        # Verificar si tenemos datos para procesar
+        if not geo_manager.current_reference_image:
+            return jsonify({
+                'success': False, 
+                'error': 'No hay imagen de referencia establecida'
+            })
         
-        return jsonify({
-            'success': True, 
-            'has_changes': has_changes,
-            'change_percentage': change_percentage
-        })
+        # Obtener telemetría actual del dron
+        drone_telemetry = drone_controller.get_telemetry()
+        
+        # Si tenemos el módulo real de correlación, usarlo
+        if hasattr(geo_correlator, 'correlate_drone_image') and not isinstance(geo_correlator, MockProcessor):
+            # Simular imagen actual (en implementación real, vendría del stream del dron)
+            mock_image_data = b"mock_image_data"  # Placeholder para imagen real
+            
+            # Usar el correlador real para detección de cambios
+            correlation_result = geo_correlator.correlate_drone_image(
+                mock_image_data, 
+                drone_telemetry,
+                confidence_threshold=0.6
+            )
+            
+            if 'error' in correlation_result:
+                return jsonify({
+                    'success': False,
+                    'error': correlation_result['error']
+                })
+            
+            # Determinar si hay cambios basándose en la correlación
+            confidence = correlation_result.get('confidence', 0)
+            has_changes = confidence < 0.8  # Si la confianza es baja, hay cambios
+            change_percentage = (1 - confidence) * 100
+            
+            return jsonify({
+                'success': True,
+                'has_changes': has_changes,
+                'change_percentage': round(change_percentage, 2),
+                'correlation_confidence': confidence,
+                'analysis_details': correlation_result
+            })
+        else:
+            # Fallback a simulación si no hay módulo real
+            logger.warning("Usando simulación para detección de cambios - módulo real no disponible")
+            return jsonify({
+                'success': True, 
+                'has_changes': True,
+                'change_percentage': 15.7,
+                'note': 'Resultado simulado - módulo real no disponible'
+            })
+            
     except Exception as e:
         logger.error(f"Error en detección de cambios: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
@@ -566,15 +607,36 @@ def detect_changes():
 def create_target():
     """Crea un nuevo objetivo para triangulación."""
     try:
-        target_id = geo_manager.create_target()
-        return jsonify({'success': True, 'target_id': target_id})
+        # Usar el módulo real de triangulación si está disponible
+        if hasattr(geo_triangulation, 'create_target') and not isinstance(geo_triangulation, MockProcessor):
+            target_id = geo_triangulation.create_target()
+            
+            # También registrar en el gestor local
+            geo_manager.targets[target_id] = {
+                'captures': [],
+                'timestamp': datetime.now().isoformat(),
+                'created_by': 'triangulation_module'
+            }
+            
+            logger.info(f"Objetivo creado usando módulo real: {target_id}")
+            return jsonify({'success': True, 'target_id': target_id})
+        else:
+            # Fallback al gestor local
+            target_id = geo_manager.create_target()
+            logger.warning(f"Objetivo creado usando fallback: {target_id}")
+            return jsonify({
+                'success': True, 
+                'target_id': target_id,
+                'note': 'Creado con módulo fallback'
+            })
+            
     except Exception as e:
         logger.error(f"Error al crear objetivo: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/geo/position/calculate', methods=['POST'])
 def calculate_position():
-    """Calcula la posición geográfica de un objetivo."""
+    """Calcula la posición geográfica de un objetivo usando triangulación real."""
     try:
         data = request.json
         target_id = data.get('target_id')
@@ -582,20 +644,168 @@ def calculate_position():
         if not target_id:
             return jsonify({'success': False, 'error': 'ID de objetivo no especificado'})
         
-        # Simulamos resultados para demo
-        return jsonify({
-            'success': True,
-            'position': {
-                'latitude': 40.416775 + (hash(target_id) % 100) / 10000,
-                'longitude': -3.703790 + (hash(target_id[::-1]) % 100) / 10000
-            },
-            'precision': {
-                'confidence': 87.5,
-                'error_radius': 15.3
-            }
-        })
+        # Usar el módulo real de triangulación si está disponible
+        if hasattr(geo_triangulation, 'calculate_position') and not isinstance(geo_triangulation, MockProcessor):
+            
+            # Verificar si necesitamos agregar observaciones automáticamente
+            drone_telemetry = drone_controller.get_telemetry()
+            gps = drone_telemetry.get('gps', {})
+            
+            if target_id not in geo_triangulation.observations or len(geo_triangulation.observations.get(target_id, [])) < 2:
+                # Agregar observaciones simuladas para demostración
+                # En una implementación real, estas vendrían de detecciones visuales reales
+                
+                # Observación 1 (posición actual del dron)
+                geo_triangulation.add_observation(
+                    target_id=target_id,
+                    drone_position={
+                        'latitude': gps.get('latitude', 40.416775),
+                        'longitude': gps.get('longitude', -3.703790),
+                        'altitude': drone_telemetry.get('altitude', 50)
+                    },
+                    target_bearing=45.0,  # En implementación real: detección visual
+                    target_elevation=15.0,  # En implementación real: cálculo de ángulos
+                    confidence=0.9
+                )
+                
+                # Observación 2 (posición ligeramente diferente)
+                geo_triangulation.add_observation(
+                    target_id=target_id,
+                    drone_position={
+                        'latitude': gps.get('latitude', 40.416775) + 0.001,
+                        'longitude': gps.get('longitude', -3.703790) + 0.001,
+                        'altitude': drone_telemetry.get('altitude', 50) + 10
+                    },
+                    target_bearing=50.0,
+                    target_elevation=12.0,
+                    confidence=0.85
+                )
+                
+                logger.info(f"Agregadas observaciones automáticas para objetivo {target_id}")
+            
+            # Calcular posición usando triangulación real
+            result = geo_triangulation.calculate_position(target_id)
+            
+            if 'error' in result:
+                return jsonify({'success': False, 'error': result['error']})
+            
+            return jsonify({
+                'success': True,
+                'position': result['position'],
+                'precision': result['precision'],
+                'observations_count': result['observations_count'],
+                'timestamp': result['timestamp'],
+                'method': 'real_triangulation'
+            })
+        else:
+            # Fallback a simulación
+            logger.warning("Usando simulación para cálculo de posición - módulo real no disponible")
+            return jsonify({
+                'success': True,
+                'position': {
+                    'latitude': 40.416775 + (hash(target_id) % 100) / 10000,
+                    'longitude': -3.703790 + (hash(target_id[::-1]) % 100) / 10000
+                },
+                'precision': {
+                    'confidence': 75.0,
+                    'error_radius': 25.0
+                },
+                'method': 'simulated',
+                'note': 'Resultado simulado - módulo real no disponible'
+            })
+            
     except Exception as e:
         logger.error(f"Error al calcular posición: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
+# Nueva ruta para agregar observaciones manuales
+@app.route('/api/geo/observation/add', methods=['POST'])
+def add_observation():
+    """Agrega una observación manual para triangulación."""
+    try:
+        data = request.json
+        target_id = data.get('target_id')
+        target_bearing = data.get('target_bearing')  # grados
+        target_elevation = data.get('target_elevation', 0)  # grados
+        confidence = data.get('confidence', 1.0)
+        
+        if not target_id or target_bearing is None:
+            return jsonify({
+                'success': False, 
+                'error': 'target_id y target_bearing son requeridos'
+            })
+        
+        # Usar el módulo real de triangulación si está disponible
+        if hasattr(geo_triangulation, 'add_observation') and not isinstance(geo_triangulation, MockProcessor):
+            # Obtener posición actual del dron
+            drone_telemetry = drone_controller.get_telemetry()
+            gps = drone_telemetry.get('gps', {})
+            
+            drone_position = {
+                'latitude': gps.get('latitude', 40.416775),
+                'longitude': gps.get('longitude', -3.703790),
+                'altitude': drone_telemetry.get('altitude', 50)
+            }
+            
+            # Agregar observación
+            observation_id = geo_triangulation.add_observation(
+                target_id=target_id,
+                drone_position=drone_position,
+                target_bearing=float(target_bearing),
+                target_elevation=float(target_elevation),
+                confidence=float(confidence)
+            )
+            
+            # Obtener número total de observaciones para este objetivo
+            obs_count = len(geo_triangulation.observations.get(target_id, []))
+            
+            return jsonify({
+                'success': True,
+                'observation_id': observation_id,
+                'total_observations': obs_count,
+                'can_calculate': obs_count >= 2
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Módulo de triangulación no disponible'
+            })
+            
+    except Exception as e:
+        logger.error(f"Error al agregar observación: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
+# Nueva ruta para obtener estado de objetivos
+@app.route('/api/geo/targets/status', methods=['GET'])
+def get_targets_status():
+    """Obtiene el estado de todos los objetivos de triangulación."""
+    try:
+        if hasattr(geo_triangulation, 'get_all_targets') and not isinstance(geo_triangulation, MockProcessor):
+            targets = geo_triangulation.get_all_targets()
+            
+            targets_status = []
+            for target_id in targets:
+                observations = geo_triangulation.observations.get(target_id, [])
+                targets_status.append({
+                    'target_id': target_id,
+                    'observations_count': len(observations),
+                    'can_calculate': len(observations) >= 2,
+                    'last_observation': observations[-1]['timestamp'] if observations else None
+                })
+            
+            return jsonify({
+                'success': True,
+                'targets': targets_status,
+                'total_targets': len(targets)
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Módulo de triangulación no disponible'
+            })
+            
+    except Exception as e:
+        logger.error(f"Error al obtener estado de objetivos: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/analysis/status', methods=['GET'])

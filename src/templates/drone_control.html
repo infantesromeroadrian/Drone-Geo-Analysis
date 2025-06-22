@@ -725,6 +725,7 @@
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.8);
+            -webkit-backdrop-filter: blur(5px);
             backdrop-filter: blur(5px);
         }
 
@@ -2179,6 +2180,524 @@
                 .catch(error => {
                     console.error('❌ Error al cargar áreas:', error);
                 });
+        };
+
+        window.debugAreaSelectors = function() {
+            console.log('=== DEBUG: ELEMENTOS DE ÁREA ===');
+            
+            const areaSelect = document.getElementById('area-select');
+            const areasList = document.getElementById('areas-list');
+            const areaNameInput = document.getElementById('area-name-input');
+            
+            console.log('📋 Estado de elementos:');
+            console.log('  - area-select:', areaSelect ? `✅ (${areaSelect.options.length} opciones)` : '❌ No encontrado');
+            console.log('  - areas-list:', areasList ? `✅ (contenido: "${areasList.textContent.substring(0, 50)}...")` : '❌ No encontrado');
+            console.log('  - area-name-input:', areaNameInput ? `✅ (valor: "${areaNameInput.value}")` : '❌ No encontrado');
+            
+            if (areaSelect) {
+                console.log('📋 Opciones en selector:');
+                for (let i = 0; i < areaSelect.options.length; i++) {
+                    console.log(`  ${i}. "${areaSelect.options[i].text}" (valor: "${areaSelect.options[i].value}")`);
+                }
+            }
+        };
+
+        // ==============================
+        // 📍 FUNCIONALIDAD DE GEOLOCALIZACIÓN
+        // ==============================
+        
+        // Variables para geolocalización
+        let currentReferenceId = null;
+        let activeTargets = [];
+        let geoManager = {
+            references: {},
+            targets: {}
+        };
+
+        // INICIALIZAR EVENT LISTENERS DE GEOLOCALIZACIÓN
+        document.addEventListener('DOMContentLoaded', function() {
+            // Esperar a que los elementos estén disponibles
+            setTimeout(() => {
+                initializeGeolocationButtons();
+            }, 100);
+        });
+
+        function initializeGeolocationButtons() {
+            console.log('🎯 Inicializando botones de geolocalización...');
+            
+            const addRefBtn = document.getElementById('add-reference-btn');
+            const detectChangesBtn = document.getElementById('detect-changes-btn');
+            const createTargetBtn = document.getElementById('create-target-btn');
+            const calculatePosBtn = document.getElementById('calculate-position-btn');
+            
+            // Verificar que los botones existen
+            if (!addRefBtn || !detectChangesBtn || !createTargetBtn || !calculatePosBtn) {
+                console.error('❌ No se encontraron todos los botones de geolocalización');
+                return;
+            }
+            
+            console.log('✅ Todos los botones encontrados, agregando event listeners...');
+            
+            // Agregar event listeners
+            addRefBtn.addEventListener('click', addReferenceImage);
+            detectChangesBtn.addEventListener('click', detectChanges);
+            createTargetBtn.addEventListener('click', createTarget);
+            calculatePosBtn.addEventListener('click', calculatePosition);
+            
+            console.log('🎉 Funcionalidad de geolocalización inicializada correctamente');
+        }
+
+        // FUNCIÓN: AÑADIR IMAGEN DE REFERENCIA
+        function addReferenceImage() {
+            console.log('📸 Añadiendo imagen de referencia...');
+            
+            // Deshabilitar botón temporalmente
+            const btn = document.getElementById('add-reference-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+            
+            fetch('/api/geo/reference/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentReferenceId = data.reference_id;
+                    geoManager.references[data.reference_id] = {
+                        timestamp: new Date().toISOString(),
+                        status: 'active'
+                    };
+                    
+                    // Mostrar notificación de éxito
+                    showNotification('success', `✅ Imagen de referencia añadida: ${data.reference_id}`);
+                    
+                    // Habilitar botón de detectar cambios
+                    document.getElementById('detect-changes-btn').disabled = false;
+                    
+                    console.log('✅ Referencia añadida exitosamente:', data.reference_id);
+                } else {
+                    showNotification('error', `❌ Error al añadir referencia: ${data.error}`);
+                    console.error('❌ Error:', data.error);
+                }
+            })
+            .catch(error => {
+                showNotification('error', `❌ Error de conexión: ${error.message}`);
+                console.error('❌ Error de conexión:', error);
+            })
+            .finally(() => {
+                // Restaurar botón
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-plus-circle"></i> Añadir Referencia';
+            });
+        }
+
+        // FUNCIÓN: DETECTAR CAMBIOS
+        function detectChanges() {
+            console.log('🔍 Detectando cambios...');
+            
+            if (!currentReferenceId) {
+                showNotification('warning', '⚠️ Primero debe añadir una imagen de referencia');
+                return;
+            }
+            
+            // Deshabilitar botón temporalmente
+            const btn = document.getElementById('detect-changes-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analizando...';
+            
+            fetch('/api/geo/changes/detect', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const hasChanges = data.has_changes;
+                    const percentage = data.change_percentage;
+                    const confidence = data.correlation_confidence;
+                    
+                    let message = '';
+                    let type = '';
+                    
+                    if (hasChanges) {
+                        message = `🔍 Cambios detectados: ${percentage}% (Confianza: ${(confidence * 100).toFixed(1)}%)`;
+                        type = 'warning';
+                    } else {
+                        message = `✅ No se detectaron cambios significativos (Confianza: ${(confidence * 100).toFixed(1)}%)`;
+                        type = 'success';
+                    }
+                    
+                    showNotification(type, message);
+                    
+                    // Mostrar detalles adicionales si están disponibles
+                    if (data.analysis_details) {
+                        const details = data.analysis_details;
+                        console.log('📊 Detalles del análisis:', details);
+                        
+                        if (details.coverage_radius_meters) {
+                            showNotification('info', `📏 Radio de cobertura: ${details.coverage_radius_meters}m`);
+                        }
+                    }
+                    
+                    console.log('✅ Detección de cambios completada:', data);
+                } else {
+                    showNotification('error', `❌ Error en detección: ${data.error}`);
+                    console.error('❌ Error:', data.error);
+                }
+            })
+            .catch(error => {
+                showNotification('error', `❌ Error de conexión: ${error.message}`);
+                console.error('❌ Error de conexión:', error);
+            })
+            .finally(() => {
+                // Restaurar botón
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-search-plus"></i> Detectar Cambios';
+            });
+        }
+
+        // FUNCIÓN: CREAR OBJETIVO
+        function createTarget() {
+            console.log('🎯 Creando nuevo objetivo...');
+            
+            // Deshabilitar botón temporalmente
+            const btn = document.getElementById('create-target-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
+            
+            fetch('/api/geo/target/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const targetId = data.target_id;
+                    
+                    // Agregar a la lista de objetivos activos
+                    activeTargets.push(targetId);
+                    geoManager.targets[targetId] = {
+                        id: targetId,
+                        observations: 0,
+                        created: new Date().toISOString(),
+                        status: 'active'
+                    };
+                    
+                    showNotification('success', `🎯 Objetivo creado: ${targetId}`);
+                    
+                    // Preguntar si quiere agregar observación inmediatamente
+                    if (confirm('¿Desea agregar una observación para este objetivo ahora?')) {
+                        promptForObservation(targetId);
+                    }
+                    
+                    // Actualizar UI
+                    updateTargetsDisplay();
+                    
+                    console.log('✅ Objetivo creado exitosamente:', targetId);
+                } else {
+                    showNotification('error', `❌ Error al crear objetivo: ${data.error}`);
+                    console.error('❌ Error:', data.error);
+                }
+            })
+            .catch(error => {
+                showNotification('error', `❌ Error de conexión: ${error.message}`);
+                console.error('❌ Error de conexión:', error);
+            })
+            .finally(() => {
+                // Restaurar botón
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-crosshairs"></i> Crear Objetivo';
+            });
+        }
+
+        // FUNCIÓN: CALCULAR POSICIÓN
+        function calculatePosition() {
+            console.log('📐 Calculando posición...');
+            
+            if (activeTargets.length === 0) {
+                showNotification('warning', '⚠️ Primero debe crear un objetivo');
+                return;
+            }
+            
+            // Si hay múltiples objetivos, preguntar cuál usar
+            let targetId;
+            if (activeTargets.length > 1) {
+                const choice = prompt(`Objetivos disponibles:\n${activeTargets.map((id, i) => `${i+1}. ${id}`).join('\n')}\n\nIngrese el número del objetivo:`);
+                const index = parseInt(choice) - 1;
+                
+                if (isNaN(index) || index < 0 || index >= activeTargets.length) {
+                    showNotification('error', '❌ Selección inválida');
+                    return;
+                }
+                
+                targetId = activeTargets[index];
+            } else {
+                targetId = activeTargets[0];
+            }
+            
+            // Deshabilitar botón temporalmente
+            const btn = document.getElementById('calculate-position-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calculando...';
+            
+            fetch('/api/geo/position/calculate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    target_id: targetId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const position = data.position;
+                    const precision = data.precision;
+                    const obsCount = data.observations_count;
+                    const method = data.method || 'unknown';
+                    
+                    // Mostrar resultado principal
+                    showNotification('success', 
+                        `📍 Posición calculada: ${position.latitude.toFixed(6)}, ${position.longitude.toFixed(6)}`
+                    );
+                    
+                    // Mostrar detalles de precisión
+                    if (precision) {
+                        const confidence = precision.confidence || 0;
+                        const errorRadius = precision.error_radius || precision.meters || 0;
+                        
+                        showNotification('info', 
+                            `🎯 Precisión: ${confidence.toFixed(1)}% | Error: ±${errorRadius.toFixed(1)}m | Observaciones: ${obsCount}`
+                        );
+                    }
+                    
+                    // Mostrar método usado
+                    showNotification('info', `🔧 Método: ${method}`);
+                    
+                    // Mostrar en el mapa
+                    if (map) {
+                        const targetMarker = L.marker([position.latitude, position.longitude], {
+                            icon: L.divIcon({
+                                className: 'target-marker',
+                                html: '🎯',
+                                iconSize: [25, 25],
+                                iconAnchor: [12, 12]
+                            })
+                        }).addTo(map);
+                        
+                        targetMarker.bindPopup(`
+                            <strong>🎯 Objetivo: ${targetId}</strong><br>
+                            📍 Lat: ${position.latitude.toFixed(6)}<br>
+                            📍 Lng: ${position.longitude.toFixed(6)}<br>
+                            🎯 Confianza: ${precision?.confidence?.toFixed(1) || 'N/A'}%<br>
+                            📊 Observaciones: ${obsCount}
+                        `).openPopup();
+                        
+                        // Centrar mapa en el objetivo
+                        map.setView([position.latitude, position.longitude], 16);
+                        
+                        console.log('🗺️ Objetivo marcado en el mapa');
+                    }
+                    
+                    console.log('✅ Posición calculada exitosamente:', data);
+                } else {
+                    showNotification('error', `❌ Error en cálculo: ${data.error}`);
+                    console.error('❌ Error:', data.error);
+                }
+            })
+            .catch(error => {
+                showNotification('error', `❌ Error de conexión: ${error.message}`);
+                console.error('❌ Error de conexión:', error);
+            })
+            .finally(() => {
+                // Restaurar botón
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-calculator"></i> Calcular Posición';
+            });
+        }
+
+        // FUNCIÓN AUXILIAR: AGREGAR OBSERVACIÓN
+        function promptForObservation(targetId) {
+            const bearing = prompt('Ingrese el rumbo hacia el objetivo (0-360 grados):');
+            if (bearing === null) return;
+            
+            const bearingNum = parseFloat(bearing);
+            if (isNaN(bearingNum) || bearingNum < 0 || bearingNum > 360) {
+                showNotification('error', '❌ Rumbo inválido. Debe ser entre 0 y 360 grados.');
+                return;
+            }
+            
+            const elevation = prompt('Ingrese el ángulo de elevación (grados, opcional):', '0');
+            const elevationNum = elevation ? parseFloat(elevation) : 0;
+            
+            const confidence = prompt('Ingrese la confianza (0.1-1.0, opcional):', '0.9');
+            const confidenceNum = confidence ? parseFloat(confidence) : 0.9;
+            
+            // Enviar observación
+            fetch('/api/geo/observation/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    target_id: targetId,
+                    target_bearing: bearingNum,
+                    target_elevation: elevationNum,
+                    confidence: confidenceNum
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const obsId = data.observation_id;
+                    const totalObs = data.total_observations;
+                    const canCalculate = data.can_calculate;
+                    
+                    // Actualizar contador local
+                    if (geoManager.targets[targetId]) {
+                        geoManager.targets[targetId].observations = totalObs;
+                    }
+                    
+                    showNotification('success', 
+                        `📊 Observación añadida: ${obsId} (Total: ${totalObs})`
+                    );
+                    
+                    if (canCalculate) {
+                        showNotification('info', '✅ Ya puede calcular la posición del objetivo');
+                    } else {
+                        showNotification('info', '⚠️ Necesita al menos 2 observaciones para calcular posición');
+                    }
+                    
+                    updateTargetsDisplay();
+                    
+                    console.log('✅ Observación añadida:', data);
+                } else {
+                    showNotification('error', `❌ Error al añadir observación: ${data.error}`);
+                    console.error('❌ Error:', data.error);
+                }
+            })
+            .catch(error => {
+                showNotification('error', `❌ Error de conexión: ${error.message}`);
+                console.error('❌ Error de conexión:', error);
+            });
+        }
+
+        // FUNCIÓN AUXILIAR: ACTUALIZAR DISPLAY DE OBJETIVOS
+        function updateTargetsDisplay() {
+            // Esta función podría expandirse para mostrar una lista visual de objetivos
+            // Por ahora, solo loggeamos el estado
+            console.log('🎯 Objetivos activos:', geoManager.targets);
+        }
+
+        // FUNCIÓN AUXILIAR: MOSTRAR NOTIFICACIONES
+        function showNotification(type, message) {
+            // Crear elemento de notificación
+            const notification = document.createElement('div');
+            notification.className = `geo-notification geo-notification-${type}`;
+            notification.innerHTML = `
+                <span>${message}</span>
+                <button onclick="this.parentElement.remove()" style="margin-left: 10px; background: none; border: none; color: inherit; font-size: 1.2em; cursor: pointer;">&times;</button>
+            `;
+            
+            // Agregar estilos si no existen
+            if (!document.querySelector('#geo-notification-styles')) {
+                const styles = document.createElement('style');
+                styles.id = 'geo-notification-styles';
+                styles.textContent = `
+                    .geo-notification {
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        padding: 12px 16px;
+                        border-radius: 6px;
+                        color: white;
+                        font-weight: 500;
+                        z-index: 10000;
+                        max-width: 400px;
+                        animation: slideIn 0.3s ease-out;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                    }
+                    .geo-notification-success { background: #10b981; }
+                    .geo-notification-error { background: #ef4444; }
+                    .geo-notification-warning { background: #f59e0b; }
+                    .geo-notification-info { background: #3b82f6; }
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                `;
+                document.head.appendChild(styles);
+            }
+            
+            // Agregar al DOM
+            document.body.appendChild(notification);
+            
+            // Auto-remover después de 5 segundos
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 5000);
+            
+            // También mostrar en consola
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        // FUNCIONES DE DEBUG PARA GEOLOCALIZACIÓN
+        window.testGeolocationButtons = function() {
+            console.log('=== TEST: BOTONES DE GEOLOCALIZACIÓN ===');
+            
+            const buttons = [
+                'add-reference-btn',
+                'detect-changes-btn', 
+                'create-target-btn',
+                'calculate-position-btn'
+            ];
+            
+            buttons.forEach(id => {
+                const btn = document.getElementById(id);
+                console.log(`${id}: ${btn ? '✅ Encontrado' : '❌ No encontrado'}`);
+                if (btn) {
+                    console.log(`  - Texto: "${btn.textContent.trim()}"`);
+                    console.log(`  - Habilitado: ${!btn.disabled}`);
+                }
+            });
+            
+            console.log('Estado del gestor de geolocalización:');
+            console.log('  - Referencias:', Object.keys(geoManager.references).length);
+            console.log('  - Objetivos:', Object.keys(geoManager.targets).length);
+            console.log('  - Referencia actual:', currentReferenceId);
+            console.log('  - Objetivos activos:', activeTargets);
+        };
+
+        window.testGeolocationFlow = function() {
+            console.log('=== TEST: FLUJO COMPLETO DE GEOLOCALIZACIÓN ===');
+            
+            showNotification('info', '🧪 Iniciando test del flujo de geolocalización...');
+            
+            // Simular flujo completo
+            setTimeout(() => {
+                console.log('1. Añadiendo referencia...');
+                addReferenceImage();
+            }, 1000);
+            
+            setTimeout(() => {
+                console.log('2. Detectando cambios...');
+                detectChanges();
+            }, 3000);
+            
+            setTimeout(() => {
+                console.log('3. Creando objetivo...');
+                createTarget();
+            }, 5000);
         };
 
         window.debugAreaSelectors = function() {

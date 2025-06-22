@@ -937,6 +937,384 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Drone Marker Styles - MEJORADO */
+        .drone-marker {
+            width: 60px !important;
+            height: 60px !important;
+            background: none !important;
+            border: none !important;
+            position: relative;
+        }
+
+        /* Drone 3D Visual */
+        .drone-icon {
+            width: 60px;
+            height: 60px;
+            position: relative;
+            transform-style: preserve-3d;
+            animation: droneHover 3s ease-in-out infinite;
+        }
+
+        .drone-body {
+            width: 40px;
+            height: 20px;
+            background: linear-gradient(45deg, #2c3e50, #34495e);
+            border-radius: 10px;
+            position: absolute;
+            top: 20px;
+            left: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .drone-arm {
+            width: 15px;
+            height: 4px;
+            background: #7f8c8d;
+            position: absolute;
+            border-radius: 2px;
+        }
+
+        .drone-arm.top-left { top: 8px; left: 5px; transform: rotate(-45deg); }
+        .drone-arm.top-right { top: 8px; right: 5px; transform: rotate(45deg); }
+        .drone-arm.bottom-left { bottom: 8px; left: 5px; transform: rotate(45deg); }
+        .drone-arm.bottom-right { bottom: 8px; right: 5px; transform: rotate(-45deg); }
+
+        .drone-propeller {
+            width: 12px;
+            height: 12px;
+            border: 2px solid #e74c3c;
+            border-radius: 50%;
+            position: absolute;
+            animation: propellerSpin 0.1s linear infinite;
+        }
+
+        .drone-propeller.prop1 { top: 2px; left: 2px; }
+        .drone-propeller.prop2 { top: 2px; right: 2px; }
+        .drone-propeller.prop3 { bottom: 2px; left: 2px; }
+        .drone-propeller.prop4 { bottom: 2px; right: 2px; }
+
+        .drone-led {
+            width: 4px;
+            height: 4px;
+            background: #2ecc71;
+            border-radius: 50%;
+            position: absolute;
+            top: 28px;
+            left: 28px;
+            animation: ledBlink 1s ease-in-out infinite alternate;
+            box-shadow: 0 0 8px #2ecc71;
+        }
+
+        @keyframes droneHover {
+            0%, 100% { transform: translateY(0px) rotateY(0deg); }
+            50% { transform: translateY(-3px) rotateY(5deg); }
+        }
+
+        @keyframes missionComplete {
+            0% { transform: scale(1) rotateY(0deg); }
+            25% { transform: scale(1.3) rotateY(90deg); }
+            50% { transform: scale(1.5) rotateY(180deg); }
+            75% { transform: scale(1.3) rotateY(270deg); }
+            100% { transform: scale(1) rotateY(360deg); }
+        }
+
+        @keyframes propellerSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes ledBlink {
+            0% { opacity: 0.5; }
+            100% { opacity: 1; box-shadow: 0 0 15px #2ecc71; }
+        }
+
+        /* Drone Status Indicators */
+        .drone-status-ring {
+            width: 80px;
+            height: 80px;
+            border: 3px solid rgba(46, 204, 113, 0.3);
+            border-radius: 50%;
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            animation: statusRing 2s ease-in-out infinite;
+        }
+
+        .drone-status-ring.connected {
+            border-color: rgba(46, 204, 113, 0.6);
+            animation: connectedPulse 2s ease-in-out infinite;
+        }
+
+        .drone-status-ring.mission-active {
+            border-color: rgba(231, 76, 60, 0.6);
+            animation: missionPulse 1s ease-in-out infinite;
+        }
+
+        @keyframes connectedPulse {
+            0%, 100% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.1); opacity: 0.9; }
+        }
+
+        @keyframes missionPulse {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; }
+        }
+
+        /* Flight Path Visualization */
+        .flight-path {
+            stroke: #3498db;
+            stroke-width: 3;
+            fill: none;
+            stroke-dasharray: 10, 5;
+            animation: pathFlow 3s linear infinite;
+        }
+
+        @keyframes pathFlow {
+            0% { stroke-dashoffset: 0; }
+            100% { stroke-dashoffset: 15; }
+        }
+
+        /* Waypoint Markers */
+        .waypoint-marker {
+            width: 30px !important;
+            height: 30px !important;
+            background: radial-gradient(circle, #f39c12, #e67e22) !important;
+            border: 3px solid #fff !important;
+            border-radius: 50% !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+            animation: waypointPulse 2s ease-in-out infinite !important;
+        }
+
+        @keyframes waypointPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        /* Enhanced Telemetry Dashboard */
+        .telemetry-data {
+            background: linear-gradient(135deg, rgba(52, 73, 94, 0.9), rgba(44, 62, 80, 0.9));
+            border-radius: 15px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        .telemetry-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            position: relative;
+        }
+
+        .telemetry-item:last-child {
+            border-bottom: none;
+        }
+
+        .telemetry-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .battery-icon { background: linear-gradient(45deg, #2ecc71, #27ae60); }
+        .altitude-icon { background: linear-gradient(45deg, #3498db, #2980b9); }
+        .speed-icon { background: linear-gradient(45deg, #e74c3c, #c0392b); }
+        .gps-icon { background: linear-gradient(45deg, #f39c12, #e67e22); }
+        .signal-icon { background: linear-gradient(45deg, #9b59b6, #8e44ad); }
+
+        .telemetry-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #ecf0f1;
+        }
+
+        /* Battery Level Visual */
+        .battery-indicator {
+            width: 60px;
+            height: 25px;
+            border: 2px solid #2ecc71;
+            border-radius: 4px;
+            position: relative;
+            display: inline-block;
+            margin-left: 10px;
+        }
+
+        .battery-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #2ecc71, #27ae60);
+            border-radius: 2px;
+            transition: width 0.5s ease;
+            width: 75%; /* Default value */
+        }
+
+        .battery-tip {
+            width: 4px;
+            height: 15px;
+            background: #2ecc71;
+            position: absolute;
+            right: -6px;
+            top: 5px;
+            border-radius: 0 2px 2px 0;
+        }
+
+        /* Signal Strength Bars */
+        .signal-bars {
+            display: inline-flex;
+            align-items: end;
+            gap: 2px;
+            margin-left: 10px;
+        }
+
+        .signal-bar {
+            width: 4px;
+            background: #9b59b6;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .signal-bar:nth-child(1) { height: 8px; }
+        .signal-bar:nth-child(2) { height: 12px; }
+        .signal-bar:nth-child(3) { height: 16px; }
+        .signal-bar:nth-child(4) { height: 20px; }
+        .signal-bar:nth-child(5) { height: 24px; }
+
+        .signal-bar.active {
+            background: linear-gradient(45deg, #2ecc71, #27ae60);
+        }
+
+        /* Speed Gauge */
+        .speed-gauge {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: conic-gradient(#e74c3c 0deg, #f39c12 120deg, #2ecc71 240deg);
+            position: relative;
+            display: inline-block;
+            margin-left: 10px;
+        }
+
+        .speed-needle {
+            width: 2px;
+            height: 20px;
+            background: #ecf0f1;
+            position: absolute;
+            top: 5px;
+            left: 24px;
+            transform-origin: bottom center;
+            transform: rotate(45deg);
+            transition: transform 0.5s ease;
+        }
+
+        /* Real-time Charts Container */
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .mini-chart {
+            height: 100px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            padding: 0.5rem;
+            position: relative;
+        }
+
+        .chart-title {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Enhanced Mission Progress */
+        .mission-progress {
+            width: 100%;
+            height: 8px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .mission-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #2ecc71);
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.5s ease;
+            position: relative;
+        }
+
+        .mission-progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: progressShine 2s ease-in-out infinite;
+        }
+
+        @keyframes progressShine {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* 3D Compass */
+        .compass-container {
+            width: 80px;
+            height: 80px;
+            position: relative;
+            margin: 1rem auto;
+        }
+
+        .compass-face {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle, #2c3e50, #34495e);
+            border: 3px solid #ecf0f1;
+            position: relative;
+            transform-style: preserve-3d;
+        }
+
+        .compass-needle {
+            width: 2px;
+            height: 30px;
+            background: linear-gradient(180deg, #e74c3c, #c0392b);
+            position: absolute;
+            top: 10px;
+            left: 39px;
+            transform-origin: bottom center;
+            border-radius: 2px;
+            transition: transform 0.5s ease;
+        }
+
+        .compass-directions {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            font-size: 0.7rem;
+            color: #ecf0f1;
+            font-weight: bold;
+        }
+
+        .compass-n { position: absolute; top: 5px; left: 50%; transform: translateX(-50%); }
+        .compass-s { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); }
+        .compass-e { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); }
+        .compass-w { position: absolute; left: 5px; top: 50%; transform: translateY(-50%); }
     </style>
 </head>
 <body>
@@ -971,28 +1349,100 @@
                     <span id="drone-status-text">Desconectado</span>
                 </div>
                 <div class="telemetry-data" id="telemetry-container">
-                    <table>
-                        <tr>
-                            <td><i class="fas fa-battery-three-quarters"></i> Batería:</td>
-                            <td id="battery-level">-</td>
-                        </tr>
-                        <tr>
-                            <td><i class="fas fa-arrow-up"></i> Altitud:</td>
-                            <td id="altitude">-</td>
-                        </tr>
-                        <tr>
-                            <td><i class="fas fa-tachometer-alt"></i> Velocidad:</td>
-                            <td id="speed">-</td>
-                        </tr>
-                        <tr>
-                            <td><i class="fas fa-map-marker-alt"></i> GPS:</td>
-                            <td id="gps-coords">-</td>
-                        </tr>
-                        <tr>
-                            <td><i class="fas fa-wifi"></i> Señal:</td>
-                            <td id="signal-strength">-</td>
-                        </tr>
-                    </table>
+                    <!-- Enhanced Battery Display -->
+                    <div class="telemetry-item">
+                        <div class="telemetry-icon battery-icon">
+                            <i class="fas fa-battery-three-quarters"></i>
+                        </div>
+                        <span>Batería</span>
+                        <div class="telemetry-value">
+                            <span id="battery-level">75%</span>
+                            <div class="battery-indicator">
+                                <div class="battery-fill" id="battery-fill"></div>
+                                <div class="battery-tip"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Enhanced Altitude Display -->
+                    <div class="telemetry-item">
+                        <div class="telemetry-icon altitude-icon">
+                            <i class="fas fa-arrow-up"></i>
+                        </div>
+                        <span>Altitud</span>
+                        <div class="telemetry-value" id="altitude">50.5 m</div>
+                    </div>
+
+                    <!-- Enhanced Speed Display -->
+                    <div class="telemetry-item">
+                        <div class="telemetry-icon speed-icon">
+                            <i class="fas fa-tachometer-alt"></i>
+                        </div>
+                        <span>Velocidad</span>
+                        <div class="telemetry-value">
+                            <span id="speed">5.2 m/s</span>
+                            <div class="speed-gauge">
+                                <div class="speed-needle" id="speed-needle"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Enhanced GPS Display -->
+                    <div class="telemetry-item">
+                        <div class="telemetry-icon gps-icon">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <span>GPS</span>
+                        <div class="telemetry-value" id="gps-coords">40.4168, -3.7038</div>
+                    </div>
+
+                    <!-- Enhanced Signal Display -->
+                    <div class="telemetry-item">
+                        <div class="telemetry-icon signal-icon">
+                            <i class="fas fa-wifi"></i>
+                        </div>
+                        <span>Señal</span>
+                        <div class="telemetry-value">
+                            <span id="signal-strength">85%</span>
+                            <div class="signal-bars" id="signal-bars">
+                                <div class="signal-bar active"></div>
+                                <div class="signal-bar active"></div>
+                                <div class="signal-bar active"></div>
+                                <div class="signal-bar active"></div>
+                                <div class="signal-bar"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3D Compass -->
+                    <div class="compass-container">
+                        <div class="compass-face">
+                            <div class="compass-needle" id="compass-needle"></div>
+                            <div class="compass-directions">
+                                <div class="compass-n">N</div>
+                                <div class="compass-s">S</div>
+                                <div class="compass-e">E</div>
+                                <div class="compass-w">W</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mission Progress Bar -->
+                    <div class="mission-progress" id="mission-progress" style="display: none;">
+                        <div class="mission-progress-bar" id="mission-progress-bar"></div>
+                    </div>
+
+                    <!-- Real-time Charts -->
+                    <div class="charts-container">
+                        <div class="mini-chart">
+                            <div class="chart-title">Altitud</div>
+                            <canvas id="altitude-chart" width="100" height="60"></canvas>
+                        </div>
+                        <div class="mini-chart">
+                            <div class="chart-title">Velocidad</div>
+                            <canvas id="speed-chart" width="100" height="60"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1349,18 +1799,35 @@
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(map);
             
-            // INICIALIZAR MARCADOR DEL DRON
+            // INICIALIZAR MARCADOR DEL DRON MEJORADO
             droneMarker = L.marker([40.416775, -3.703790], {
                 icon: L.divIcon({
                     className: 'drone-marker',
-                    html: '🚁',
-                    iconSize: [30, 30],
-                    iconAnchor: [15, 15]
+                    html: `
+                        <div class="drone-icon">
+                            <div class="drone-status-ring" id="drone-status-ring"></div>
+                            <div class="drone-body"></div>
+                            <div class="drone-arm top-left"></div>
+                            <div class="drone-arm top-right"></div>
+                            <div class="drone-arm bottom-left"></div>
+                            <div class="drone-arm bottom-right"></div>
+                            <div class="drone-propeller prop1"></div>
+                            <div class="drone-propeller prop2"></div>
+                            <div class="drone-propeller prop3"></div>
+                            <div class="drone-propeller prop4"></div>
+                            <div class="drone-led"></div>
+                        </div>
+                    `,
+                    iconSize: [60, 60],
+                    iconAnchor: [30, 30]
                 })
             });
             
             droneMarker.addTo(map);
             console.log('🚁 Dron inicializado en el mapa');
+            
+            // Inicializar mejoras visuales
+            initializeVisualEnhancements();
             
             let connected = false;
             let streaming = false;
@@ -1395,6 +1862,101 @@
             
             // FUNCIONALIDAD LLM - INICIALIZAR INMEDIATAMENTE
             initializeLLMFunctionality();
+
+            // FUNCIÓN PARA INICIALIZAR MEJORAS VISUALES
+            function initializeVisualEnhancements() {
+                console.log('🎨 Inicializando mejoras visuales...');
+                
+                // Inicializar canvas para gráficos
+                initializeCharts();
+                
+                // Configurar eventos de hover para telemetría
+                setupTelemetryInteractions();
+                
+                // Agregar efectos de partículas al drone
+                addDroneParticleEffects();
+                
+                console.log('✨ Mejoras visuales inicializadas');
+            }
+
+            function initializeCharts() {
+                const altitudeCanvas = document.getElementById('altitude-chart');
+                const speedCanvas = document.getElementById('speed-chart');
+                
+                if (altitudeCanvas && speedCanvas) {
+                    // Configurar canvas con alta resolución
+                    [altitudeCanvas, speedCanvas].forEach(canvas => {
+                        const ctx = canvas.getContext('2d');
+                        const rect = canvas.getBoundingClientRect();
+                        const dpr = window.devicePixelRatio || 1;
+                        
+                        canvas.width = rect.width * dpr;
+                        canvas.height = rect.height * dpr;
+                        ctx.scale(dpr, dpr);
+                        
+                        canvas.style.width = rect.width + 'px';
+                        canvas.style.height = rect.height + 'px';
+                    });
+                }
+            }
+
+            function setupTelemetryInteractions() {
+                const telemetryItems = document.querySelectorAll('.telemetry-item');
+                
+                telemetryItems.forEach(item => {
+                    item.addEventListener('mouseenter', function() {
+                        this.style.background = 'rgba(255,255,255,0.1)';
+                        this.style.transform = 'translateX(5px)';
+                        this.style.transition = 'all 0.3s ease';
+                    });
+                    
+                    item.addEventListener('mouseleave', function() {
+                        this.style.background = 'transparent';
+                        this.style.transform = 'translateX(0)';
+                    });
+                });
+            }
+
+            function addDroneParticleEffects() {
+                // Agregar efecto de estela al drone cuando se mueve
+                if (typeof L !== 'undefined') {
+                    let droneTrail = [];
+                    
+                    // Función para actualizar estela
+                    window.updateDroneTrail = function(position) {
+                        droneTrail.push([position.latitude, position.longitude]);
+                        
+                        // Mantener solo las últimas 10 posiciones
+                        if (droneTrail.length > 10) {
+                            droneTrail.shift();
+                        }
+                        
+                        // Crear línea de estela con opacidad degradada
+                        if (droneTrail.length > 1) {
+                            const trail = L.polyline(droneTrail, {
+                                color: '#3498db',
+                                weight: 2,
+                                opacity: 0.6,
+                                dashArray: '5, 5'
+                            });
+                            
+                            // Remover estela anterior
+                            if (window.currentTrail) {
+                                map.removeLayer(window.currentTrail);
+                            }
+                            
+                            window.currentTrail = trail.addTo(map);
+                            
+                            // Remover estela después de 5 segundos
+                            setTimeout(() => {
+                                if (map.hasLayer(trail)) {
+                                    map.removeLayer(trail);
+                                }
+                            }, 5000);
+                        }
+                    };
+                }
+            }
 
             // EVENT LISTENERS PRINCIPALES
             document.querySelectorAll('.tab').forEach(tab => {
@@ -2007,16 +2569,32 @@
                     droneStatusIndicator.classList.add('status-connected');
                     droneStatusText.textContent = 'Conectado';
                     
+                    // Actualizar anillo de estado del drone en el mapa
+                    const statusRing = document.querySelector('.drone-status-ring');
+                    if (statusRing) {
+                        statusRing.classList.add('connected');
+                        statusRing.classList.remove('mission-active');
+                    }
+                    
                     connectBtn.disabled = true;
                     disconnectBtn.disabled = false;
                     takeoffBtn.disabled = false;
                     landBtn.disabled = false;
                     startStreamBtn.disabled = false;
                     captureImageBtn.disabled = false;
+                    
+                    // Iniciar telemetría automática
+                    startTelemetryUpdates();
                 } else {
                     droneStatusIndicator.classList.remove('status-connected');
                     droneStatusIndicator.classList.add('status-disconnected');
                     droneStatusText.textContent = 'Desconectado';
+                    
+                    // Actualizar anillo de estado del drone en el mapa
+                    const statusRing = document.querySelector('.drone-status-ring');
+                    if (statusRing) {
+                        statusRing.classList.remove('connected', 'mission-active');
+                    }
                     
                     connectBtn.disabled = false;
                     disconnectBtn.disabled = true;
@@ -2026,7 +2604,238 @@
                     stopStreamBtn.disabled = true;
                     captureImageBtn.disabled = true;
                     analyzeImageBtn.disabled = true;
+                    
+                    // Detener telemetría automática
+                    stopTelemetryUpdates();
                 }
+            }
+
+            // Variables para gráficos de tiempo real
+            let altitudeData = [];
+            let speedData = [];
+            let telemetryUpdateInterval = null;
+
+            function startTelemetryUpdates() {
+                if (telemetryUpdateInterval) return; // Ya está ejecutándose
+                
+                telemetryUpdateInterval = setInterval(() => {
+                    fetch('/api/drone/telemetry')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            updateTelemetryDisplay(data.telemetry);
+                        }
+                    })
+                    .catch(error => console.error('Error obteniendo telemetría:', error));
+                }, 1000); // Actualizar cada segundo
+            }
+
+            function stopTelemetryUpdates() {
+                if (telemetryUpdateInterval) {
+                    clearInterval(telemetryUpdateInterval);
+                    telemetryUpdateInterval = null;
+                }
+            }
+
+            function updateTelemetryDisplay(telemetry) {
+                // Actualizar batería
+                const batteryLevel = document.getElementById('battery-level');
+                const batteryFill = document.getElementById('battery-fill');
+                if (batteryLevel && batteryFill) {
+                    batteryLevel.textContent = telemetry.battery + '%';
+                    batteryFill.style.width = telemetry.battery + '%';
+                    
+                    // Cambiar color según nivel de batería
+                    if (telemetry.battery < 20) {
+                        batteryFill.style.background = 'linear-gradient(90deg, #e74c3c, #c0392b)';
+                    } else if (telemetry.battery < 50) {
+                        batteryFill.style.background = 'linear-gradient(90deg, #f39c12, #e67e22)';
+                    } else {
+                        batteryFill.style.background = 'linear-gradient(90deg, #2ecc71, #27ae60)';
+                    }
+                }
+
+                // Actualizar altitud
+                const altitude = document.getElementById('altitude');
+                if (altitude) {
+                    altitude.textContent = telemetry.altitude.toFixed(1) + ' m';
+                }
+
+                // Actualizar velocidad
+                const speed = document.getElementById('speed');
+                const speedNeedle = document.getElementById('speed-needle');
+                if (speed && speedNeedle) {
+                    const horizontalSpeed = telemetry.speed.horizontal;
+                    speed.textContent = horizontalSpeed.toFixed(1) + ' m/s';
+                    
+                    // Rotar aguja del velocímetro (0-20 m/s = 0-180 grados)
+                    const angle = Math.min(horizontalSpeed * 9, 180);
+                    speedNeedle.style.transform = `rotate(${angle}deg)`;
+                }
+
+                // Actualizar GPS
+                const gpsCoords = document.getElementById('gps-coords');
+                if (gpsCoords) {
+                    gpsCoords.textContent = `${telemetry.gps.latitude.toFixed(6)}, ${telemetry.gps.longitude.toFixed(6)}`;
+                }
+
+                // Actualizar señal
+                const signalStrength = document.getElementById('signal-strength');
+                const signalBars = document.getElementById('signal-bars');
+                if (signalStrength && signalBars) {
+                    signalStrength.textContent = telemetry.signal_strength + '%';
+                    
+                    // Actualizar barras de señal
+                    const bars = signalBars.querySelectorAll('.signal-bar');
+                    const activeBars = Math.ceil((telemetry.signal_strength / 100) * 5);
+                    bars.forEach((bar, index) => {
+                        if (index < activeBars) {
+                            bar.classList.add('active');
+                        } else {
+                            bar.classList.remove('active');
+                        }
+                    });
+                }
+
+                // Actualizar brújula
+                const compassNeedle = document.getElementById('compass-needle');
+                if (compassNeedle && telemetry.orientation) {
+                    const yaw = telemetry.orientation.yaw;
+                    compassNeedle.style.transform = `rotate(${yaw}deg)`;
+                }
+
+                // Actualizar gráficos de tiempo real
+                updateRealTimeCharts(telemetry);
+            }
+
+            function updateRealTimeCharts(telemetry) {
+                // Agregar nuevos datos
+                const now = Date.now();
+                altitudeData.push({ time: now, value: telemetry.altitude });
+                speedData.push({ time: now, value: telemetry.speed.horizontal });
+
+                // Mantener solo los últimos 60 segundos
+                const cutoff = now - 60000;
+                altitudeData = altitudeData.filter(d => d.time > cutoff);
+                speedData = speedData.filter(d => d.time > cutoff);
+
+                // Dibujar gráficos
+                drawMiniChart('altitude-chart', altitudeData, '#3498db');
+                drawMiniChart('speed-chart', speedData, '#e74c3c');
+            }
+
+            function drawMiniChart(canvasId, data, color) {
+                const canvas = document.getElementById(canvasId);
+                if (!canvas || data.length === 0) return;
+
+                const ctx = canvas.getContext('2d');
+                const width = canvas.width;
+                const height = canvas.height;
+
+                // Limpiar canvas
+                ctx.clearRect(0, 0, width, height);
+
+                // Encontrar valores mín/máx
+                const values = data.map(d => d.value);
+                const minValue = Math.min(...values);
+                const maxValue = Math.max(...values);
+                const range = maxValue - minValue || 1;
+
+                // Dibujar línea
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+
+                data.forEach((point, index) => {
+                    const x = (index / (data.length - 1)) * width;
+                    const y = height - ((point.value - minValue) / range) * height;
+                    
+                    if (index === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                });
+
+                ctx.stroke();
+
+                // Agregar gradiente de relleno
+                ctx.globalCompositeOperation = 'destination-over';
+                ctx.fillStyle = color + '20'; // 20% opacity
+                ctx.fill();
+                ctx.globalCompositeOperation = 'source-over';
+            }
+
+            function updateMissionProgress(percentage) {
+                const progressBar = document.getElementById('mission-progress-bar');
+                const progressContainer = document.getElementById('mission-progress');
+                
+                if (progressBar && progressContainer) {
+                    progressContainer.style.display = 'block';
+                    progressBar.style.width = percentage + '%';
+                    
+                    // Actualizar anillo de estado del drone
+                    const statusRing = document.querySelector('.drone-status-ring');
+                    if (statusRing && percentage > 0) {
+                        statusRing.classList.add('mission-active');
+                    } else if (statusRing) {
+                        statusRing.classList.remove('mission-active');
+                    }
+                }
+            }
+
+            function createFlightPathVisualization(waypoints) {
+                if (!waypoints || waypoints.length === 0) return;
+
+                // Limpiar rutas existentes
+                clearMapElements();
+
+                // Crear línea de vuelo animada
+                const pathCoords = waypoints.map(wp => [wp.latitude || wp.lat, wp.longitude || wp.lng]);
+                
+                const flightPath = L.polyline(pathCoords, {
+                    color: '#3498db',
+                    weight: 4,
+                    opacity: 0.8,
+                    dashArray: '10, 5',
+                    className: 'flight-path'
+                }).addTo(map);
+
+                // Agregar waypoints animados
+                waypoints.forEach((wp, index) => {
+                    const waypoint = L.marker([wp.latitude || wp.lat, wp.longitude || wp.lng], {
+                        icon: L.divIcon({
+                            className: 'waypoint-marker',
+                            html: `<div style="
+                                width: 30px; 
+                                height: 30px; 
+                                background: radial-gradient(circle, #f39c12, #e67e22); 
+                                border: 3px solid #fff; 
+                                border-radius: 50%; 
+                                display: flex; 
+                                align-items: center; 
+                                justify-content: center; 
+                                font-weight: bold; 
+                                color: white; 
+                                font-size: 12px;
+                                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                            ">${index + 1}</div>`,
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 15]
+                        })
+                    }).addTo(map);
+
+                    waypoint.bindPopup(`
+                        <b>Waypoint ${index + 1}</b><br>
+                        Lat: ${(wp.latitude || wp.lat).toFixed(6)}<br>
+                        Lng: ${(wp.longitude || wp.lng).toFixed(6)}<br>
+                        Alt: ${wp.altitude || wp.alt || 0}m
+                    `);
+
+                    waypointMarkers.push(waypoint);
+                });
+
+                return flightPath;
             }
 
             function updateStreamingStatus(isStreaming) {
@@ -2041,9 +2850,188 @@
 
             function updateDronePosition(position) {
                 const pos = [position.latitude, position.longitude];
-                droneMarker.setLatLng(pos);
+                
+                // Animación suave del movimiento del drone
+                animateDroneMovement(droneMarker.getLatLng(), pos);
+                
+                // Actualizar estela del drone
+                if (window.updateDroneTrail) {
+                    window.updateDroneTrail(position);
+                }
+                
                 ensureDroneVisible();
                 map.setView(pos, 18);
+            }
+
+            function animateDroneMovement(fromPos, toPos) {
+                const steps = 30; // Número de pasos para la animación
+                const stepLat = (toPos[0] - fromPos.lat) / steps;
+                const stepLng = (toPos[1] - fromPos.lng) / steps;
+                let currentStep = 0;
+
+                const animationInterval = setInterval(() => {
+                    currentStep++;
+                    const newLat = fromPos.lat + (stepLat * currentStep);
+                    const newLng = fromPos.lng + (stepLng * currentStep);
+                    
+                    droneMarker.setLatLng([newLat, newLng]);
+                    
+                    // Rotar el drone hacia la dirección de movimiento
+                    const bearing = calculateBearing(fromPos, toPos);
+                    rotateDrone(bearing);
+                    
+                    if (currentStep >= steps) {
+                        clearInterval(animationInterval);
+                        droneMarker.setLatLng(toPos);
+                    }
+                }, 50); // 50ms entre pasos = animación de 1.5 segundos
+            }
+
+            function calculateBearing(from, to) {
+                const dLng = (to[1] - from.lng) * Math.PI / 180;
+                const lat1 = from.lat * Math.PI / 180;
+                const lat2 = to[0] * Math.PI / 180;
+                
+                const y = Math.sin(dLng) * Math.cos(lat2);
+                const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+                
+                return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+            }
+
+            function rotateDrone(bearing) {
+                const droneIcon = document.querySelector('.drone-icon');
+                if (droneIcon) {
+                    droneIcon.style.transform = `rotate(${bearing}deg)`;
+                }
+            }
+
+            // Función para simular vuelo de misión con efectos visuales
+            function simulateMissionFlight(waypoints) {
+                if (!waypoints || waypoints.length === 0) return;
+
+                // Crear visualización del path
+                createFlightPathVisualization(waypoints);
+                
+                let currentWaypointIndex = 0;
+                const missionInterval = setInterval(() => {
+                    if (currentWaypointIndex >= waypoints.length) {
+                        clearInterval(missionInterval);
+                        updateMissionProgress(100);
+                        
+                        // Efecto de misión completada
+                        showMissionCompleteEffect();
+                        return;
+                    }
+
+                    const waypoint = waypoints[currentWaypointIndex];
+                    const progress = ((currentWaypointIndex + 1) / waypoints.length) * 100;
+                    
+                    // Mover drone al waypoint
+                    updateDronePosition({
+                        latitude: waypoint.latitude || waypoint.lat,
+                        longitude: waypoint.longitude || waypoint.lng
+                    });
+                    
+                    // Actualizar progreso de misión
+                    updateMissionProgress(progress);
+                    
+                    // Destacar waypoint actual
+                    highlightCurrentWaypoint(currentWaypointIndex);
+                    
+                    currentWaypointIndex++;
+                }, 3000); // 3 segundos entre waypoints
+            }
+
+            function highlightCurrentWaypoint(index) {
+                // Remover highlight anterior
+                waypointMarkers.forEach(marker => {
+                    const element = marker.getElement();
+                    if (element) {
+                        element.style.transform = 'scale(1)';
+                        element.style.border = '3px solid #fff';
+                    }
+                });
+
+                // Destacar waypoint actual
+                if (waypointMarkers[index]) {
+                    const element = waypointMarkers[index].getElement();
+                    if (element) {
+                        element.style.transform = 'scale(1.5)';
+                        element.style.border = '3px solid #e74c3c';
+                        element.style.boxShadow = '0 0 20px rgba(231, 76, 60, 0.8)';
+                    }
+                }
+            }
+
+            function showMissionCompleteEffect() {
+                // Efecto de pulsación en el drone
+                const droneIcon = document.querySelector('.drone-icon');
+                if (droneIcon) {
+                    droneIcon.style.animation = 'missionComplete 2s ease-in-out';
+                    
+                    setTimeout(() => {
+                        droneIcon.style.animation = 'droneHover 3s ease-in-out infinite';
+                    }, 2000);
+                }
+
+                // Mostrar notificación
+                showNotification('success', '✅ Misión completada exitosamente');
+            }
+
+            function showNotification(type, message) {
+                // Crear elemento de notificación
+                const notification = document.createElement('div');
+                notification.className = `notification notification-${type}`;
+                notification.textContent = message;
+                
+                // Estilos
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    padding: 15px 20px;
+                    border-radius: 8px;
+                    color: white;
+                    font-weight: 600;
+                    z-index: 10000;
+                    max-width: 400px;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                    transform: translateX(100%);
+                    transition: transform 0.3s ease;
+                `;
+
+                // Colores según tipo
+                switch(type) {
+                    case 'success':
+                        notification.style.background = 'linear-gradient(45deg, #2ecc71, #27ae60)';
+                        break;
+                    case 'error':
+                        notification.style.background = 'linear-gradient(45deg, #e74c3c, #c0392b)';
+                        break;
+                    case 'warning':
+                        notification.style.background = 'linear-gradient(45deg, #f39c12, #e67e22)';
+                        break;
+                    case 'info':
+                        notification.style.background = 'linear-gradient(45deg, #3498db, #2980b9)';
+                        break;
+                }
+
+                document.body.appendChild(notification);
+
+                // Animar entrada
+                setTimeout(() => {
+                    notification.style.transform = 'translateX(0)';
+                }, 100);
+
+                // Remover después de 5 segundos
+                setTimeout(() => {
+                    notification.style.transform = 'translateX(100%)';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                    }, 300);
+                }, 5000);
             }
 
             function updateMissionList(missions) {
@@ -2722,3 +3710,4 @@
     </script>
 </body>
 </html> 
+rewritten_file>

@@ -17,20 +17,84 @@ Esta herramienta de OSINT militar analiza imágenes para determinar ubicaciones 
 - Clave API de OpenAI con acceso a GPT-4 Vision
 - Para Windows: Servidor X (VcXsrv o Xming)
 
-## Instalación con Docker
+## 🚀 Configuración
 
-1. Clonar este repositorio:
+### Opción 1: Docker Model Runner (Recomendado) 🐳
+
+**Prerrequisitos:**
+- Docker Desktop 4.40+ con Model Runner habilitado
+- Su modelo Llama 3.2 ya descargado con `docker model pull ai/llama3.2:latest`
+
+1. **Verificar Docker Model Runner:**
 ```bash
-git clone https://github.com/your-username/drone-geo-analysis.git
-cd drone-geo-analysis
+docker model status
+# Debe mostrar: "Docker Model Runner is running"
+
+docker model ls
+# Debe mostrar su modelo ai/llama3.2:latest
 ```
 
-2. Configurar la clave API de OpenAI:
+2. **Iniciar el modelo:**
+```bash
+docker model run ai/llama3.2:latest
+```
 
-Crea un archivo `.env` en la raíz del proyecto con el siguiente contenido:
+3. **Configurar variables de entorno:**
+```bash
+cp .env.example .env
+# Editar .env y configurar:
+LLM_PROVIDER=docker
+DOCKER_MODEL_NAME=ai/llama3.2:latest
 ```
-OPENAI_API_KEY=tu_clave_api_de_openai
+
+### Opción 2: OpenAI API (Alternativa)
+
+1. **Configurar variables de entorno:**
+```bash
+cp .env.example .env
+# Editar .env y configurar:
+LLM_PROVIDER=openai
+OPENAI_API_KEY=tu_clave_api_aqui
 ```
+
+### Instalación de dependencias
+
+2. **Instalar dependencias de Python:**
+```bash
+pip install -r requirements.txt
+```
+
+3. **Ejecutar la aplicación:**
+```bash
+python src/main.py
+```
+
+4. **Acceder a la interfaz:**
+   - Panel principal: http://localhost:5000
+   - Control de drones: http://localhost:5000/drone_control
+
+## 🤖 Uso de Misiones Inteligentes
+
+### Comando de ejemplo:
+```
+"Patrulla el perímetro norte de la base a 50 metros de altura, busca vehículos sospechosos"
+```
+
+### Resultado:
+El LLM (Llama 3.2 local o GPT-4) generará automáticamente:
+- ✅ Waypoints GPS específicos
+- ✅ Altitudes apropiadas 
+- ✅ Acciones para cada punto
+- ✅ Consideraciones de seguridad
+- ✅ Criterios de éxito
+
+## 🔧 Ventajas de Docker Models
+
+- **🔒 Privacidad total:** Los datos nunca salen de tu máquina
+- **💰 Sin costos por token:** Una vez descargado, uso ilimitado
+- **⚡ Baja latencia:** Sin llamadas a APIs externas
+- **🛠️ Personalizable:** Puedes entrenar modelos específicos
+- **📡 Funciona offline:** No requiere conexión a internet
 
 ## Configuración para Windows
 

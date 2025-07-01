@@ -8,21 +8,35 @@ import logging
 from openai import OpenAI
 from typing import Dict, Any, List, Optional
 
-from src.utils.config import get_openai_config
+from src.utils.config import get_llm_config
 
 logger = logging.getLogger(__name__)
 
 class GeoAnalyzer:
     """
     Clase que implementa la lógica para analizar imágenes y determinar
-    su ubicación geográfica usando GPT-4 con análisis de visión.
+    su ubicación geográfica usando LLM con análisis de visión.
     """
     
     def __init__(self):
         """Inicializa el analizador geográfico."""
-        self.config = get_openai_config()
-        self.client = OpenAI(api_key=self.config["api_key"])
-        logger.info("Inicializado el analizador geográfico")
+        self.llm_config = get_llm_config()
+        self.provider = self.llm_config["provider"]
+        self.config = self.llm_config["config"]
+        
+        # Inicializar cliente según el proveedor
+        if self.provider == "docker":
+            logger.warning("⚠️ Docker Models no soporta análisis de imágenes. Usando OpenAI como fallback.")
+            # Fallback a OpenAI para análisis de imágenes
+            from src.utils.config import get_openai_config
+            self.config = get_openai_config()
+            self.client = OpenAI(api_key=self.config["api_key"])
+            self.provider = "openai"  # Override para este caso específico
+        elif self.provider == "openai":
+            logger.info("Inicializando OpenAI API para análisis de imágenes")
+            self.client = OpenAI(api_key=self.config["api_key"])
+        
+        logger.info(f"Analizador geográfico inicializado con proveedor: {self.provider}")
         
     def analyze_image(self, base64_image: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -35,7 +49,21 @@ class GeoAnalyzer:
         Returns:
             Diccionario con los resultados del análisis
         """
-        logger.info(f"Analizando imagen: {metadata.get('filename', 'unknown')}")
+        logger.info(f"Analizando imagen: {metadata.get('filename', 'unknown')} con {self.provider}")
+        
+        # Verificar que tenemos una API key válida
+        if not self.config.get("api_key") or self.config["api_key"].startswith("your_"):
+            logger.error("API key de OpenAI no configurada o inválida")
+            return {
+                "error": "API key de OpenAI no configurada. El análisis de imágenes requiere OpenAI GPT-4 Vision.",
+                "country": "No configurado",
+                "city": "No configurado", 
+                "district": "No configurado",
+                "neighborhood": "No configurado",
+                "street": "No configurado",
+                "confidence": 0,
+                "supporting_evidence": ["API key de OpenAI requerida para análisis de imágenes"]
+            }
         
         try:
             # Construir el sistema de prompt
@@ -61,11 +89,11 @@ class GeoAnalyzer:
             
             # Procesar respuesta
             result = self._process_response(response)
-            logger.info("Análisis completado con éxito")
+            logger.info(f"Análisis completado con éxito usando {self.provider}")
             return result
             
         except Exception as e:
-            logger.error(f"Error en el análisis: {str(e)}")
+            logger.error(f"Error en el análisis con {self.provider}: {str(e)}")
             return {
                 "error": str(e),
                 "country": "Error",
@@ -74,7 +102,7 @@ class GeoAnalyzer:
                 "neighborhood": "Error",
                 "street": "Error",
                 "confidence": 0,
-                "supporting_evidence": []
+                "supporting_evidence": [f"Error con {self.provider}: {str(e)}"]
             }
     
     def _build_system_prompt(self) -> str:

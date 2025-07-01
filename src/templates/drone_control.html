@@ -205,14 +205,34 @@
             border: 1px solid var(--border);
             border-radius: 12px;
             overflow: hidden;
-            height: 45vh;
-            min-height: 350px;
+            height: 45vh !important;
+            min-height: 350px !important;
             background: var(--bg-input);
         }
         
         #map {
-            width: 100%;
-            height: 100%;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 1;
+        }
+        
+        /* Asegurar que Leaflet se muestre correctamente */
+        .leaflet-container {
+            width: 100% !important;
+            height: 100% !important;
+            background: #1a365d !important;
+        }
+        
+        /* Debug: Fondo visible para verificar contenedor */
+        .map-container::before {
+            content: "🗺️ Cargando mapa...";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--text-muted);
+            z-index: 0;
+            font-size: 1.2rem;
         }
         
         /* Video Container */
@@ -1792,12 +1812,85 @@
         }
         
         document.addEventListener('DOMContentLoaded', function() {
-            // INICIALIZAR MAPA
-            map = L.map('map').setView([40.416775, -3.703790], 13);
+            console.log('🚀 Iniciando aplicación de drones...');
             
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
+            // VERIFICAR QUE LEAFLET ESTÁ DISPONIBLE
+            if (typeof L === 'undefined') {
+                console.error('❌ Leaflet no está cargado');
+                alert('Error: Librería de mapas no disponible. Verifica tu conexión a internet.');
+                return;
+            }
+            console.log('✅ Leaflet está disponible');
+            
+            // VERIFICAR QUE EL DIV DEL MAPA EXISTE
+            const mapDiv = document.getElementById('map');
+            if (!mapDiv) {
+                console.error('❌ Elemento #map no encontrado');
+                return;
+            }
+            console.log('✅ Elemento #map encontrado');
+            
+            try {
+                // INICIALIZAR MAPA CON MEJORES CONFIGURACIONES
+                console.log('🗺️ Inicializando mapa...');
+                map = L.map('map', {
+                    center: [40.416775, -3.703790],
+                    zoom: 13,
+                    preferCanvas: true,
+                    attributionControl: true,
+                    zoomControl: true
+                });
+                console.log('✅ Mapa inicializado');
+                
+                // AGREGAR TILES CON MÚLTIPLES FUENTES
+                const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                    maxZoom: 19,
+                    timeout: 10000 // 10 segundos timeout
+                });
+                
+                tileLayer.addTo(map);
+                console.log('✅ Tiles agregados al mapa');
+                
+                // VERIFICAR CARGA DE TILES
+                tileLayer.on('loading', function() {
+                    console.log('🔄 Cargando tiles del mapa...');
+                });
+                
+                tileLayer.on('load', function() {
+                    console.log('✅ Tiles cargados correctamente');
+                    // Ocultar mensaje de carga
+                    const mapContainer = document.querySelector('.map-container');
+                    if (mapContainer) {
+                        mapContainer.style.position = 'relative';
+                    }
+                });
+                
+                tileLayer.on('tileerror', function(error) {
+                    console.error('❌ Error cargando tiles:', error);
+                    // Intentar CDN alternativa
+                    console.log('🔄 Intentando CDN alternativa...');
+                    map.removeLayer(tileLayer);
+                    const altTileLayer = L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                        maxZoom: 19
+                    });
+                    altTileLayer.addTo(map);
+                });
+                
+                // FORZAR REDIMENSIONAMIENTO DEL MAPA
+                setTimeout(() => {
+                    if (map) {
+                        map.invalidateSize();
+                        console.log('🔄 Mapa redimensionado');
+                    }
+                }, 500);
+                
+            } catch (error) {
+                console.error('❌ Error inicializando mapa:', error);
+                alert('Error inicializando el mapa: ' + error.message);
+                return;
+            }
             
             // INICIALIZAR MARCADOR DEL DRON MEJORADO
             droneMarker = L.marker([40.416775, -3.703790], {
@@ -3097,6 +3190,61 @@
             console.log('✅ Mapa reseteado');
         };
 
+        // 🛠️ FUNCIONES DE DEBUG PARA EL USUARIO
+        window.debugMap = function() {
+            console.log('=== DEBUG: ESTADO DEL MAPA ===');
+            console.log('¿Leaflet disponible?', typeof L !== 'undefined');
+            console.log('¿Mapa inicializado?', map !== undefined);
+            console.log('¿Div #map existe?', document.getElementById('map') !== null);
+            
+            const mapContainer = document.querySelector('.map-container');
+            console.log('¿Contenedor existe?', mapContainer !== null);
+            
+            if (mapContainer) {
+                const style = window.getComputedStyle(mapContainer);
+                console.log('Altura del contenedor:', style.height);
+                console.log('Display del contenedor:', style.display);
+            }
+            
+            if (map) {
+                console.log('Centro del mapa:', map.getCenter());
+                console.log('Zoom del mapa:', map.getZoom());
+                console.log('Tamaño del mapa:', map.getSize());
+            }
+            
+            console.log('=== FIN DEBUG ===');
+        };
+
+        window.forceMapResize = function() {
+            console.log('🔄 Forzando redimensionamiento del mapa...');
+            if (map) {
+                map.invalidateSize();
+                console.log('✅ Mapa redimensionado');
+            } else {
+                console.log('❌ Mapa no disponible');
+            }
+        };
+
+        window.testMapTiles = function() {
+            console.log('🧪 Probando tiles alternativos...');
+            if (map) {
+                // Remover tiles actuales
+                map.eachLayer(function(layer) {
+                    if (layer instanceof L.TileLayer) {
+                        map.removeLayer(layer);
+                    }
+                });
+                
+                // Agregar tiles de prueba
+                const testTileLayer = L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                    maxZoom: 19
+                });
+                testTileLayer.addTo(map);
+                console.log('✅ Tiles de prueba aplicados');
+            }
+        };
+
         window.testUploadButton = function() {
             console.log('=== PRUEBA DEL BOTÓN DE UPLOAD ===');
             
@@ -3710,4 +3858,3 @@
     </script>
 </body>
 </html> 
-rewritten_file>

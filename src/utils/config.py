@@ -45,4 +45,39 @@ def get_openai_config():
         "top_p": 1.0,
         "frequency_penalty": 0.0,
         "presence_penalty": 0.0,
-    } 
+    }
+
+def get_docker_model_config():
+    """Obtiene la configuración para Docker Model Runner."""
+    return {
+        "base_url": os.environ.get("DOCKER_MODEL_URL", "http://model-runner.docker.internal/engines/llama.cpp/v1/"),
+        "api_key": os.environ.get("DOCKER_MODEL_API_KEY", "modelrunner"),  # Docker Model Runner usa esta key por defecto
+        "model": os.environ.get("DOCKER_MODEL_NAME", "ai/llama3.2:latest"),
+        "temperature": 0.3,
+        "max_tokens": 2000,
+        "timeout": 120,  # Modelos locales pueden tomar más tiempo
+    }
+
+def get_llm_config():
+    """
+    Obtiene la configuración del LLM según la variable de entorno LLM_PROVIDER.
+    Por defecto usa Docker Models si está disponible, sino OpenAI.
+    """
+    provider = os.environ.get("LLM_PROVIDER", "docker").lower()
+    
+    if provider == "docker":
+        return {
+            "provider": "docker",
+            "config": get_docker_model_config()
+        }
+    elif provider == "openai":
+        return {
+            "provider": "openai", 
+            "config": get_openai_config()
+        }
+    else:
+        # Por defecto intentar Docker Models
+        return {
+            "provider": "docker",
+            "config": get_docker_model_config()
+        } 

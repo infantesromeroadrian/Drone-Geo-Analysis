@@ -3,6 +3,7 @@
 """
 Módulo de planificación de misiones con IA.
 Permite crear misiones inteligentes usando LLM para control de drones.
+Soporta tanto Docker Model Runner como OpenAI API.
 """
 
 import json
@@ -21,6 +22,7 @@ import math
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.helpers import get_missions_directory, get_project_root
+from utils.config import get_llm_config
 
 # Configurar logger
 logger = logging.getLogger(__name__)
@@ -102,11 +104,25 @@ class MissionArea:
     points_of_interest: List[Dict] = None
 
 class LLMMissionPlanner:
-    """Planificador de misiones inteligente usando LLM."""
+    """Planificador de misiones inteligente usando LLM (Docker Models o OpenAI)."""
     
     def __init__(self):
-        """Inicializa el planificador."""
-        self.client = openai.OpenAI()
+        """Inicializa el planificador con el proveedor de LLM configurado."""
+        self.llm_config = get_llm_config()
+        self.provider = self.llm_config["provider"]
+        self.config = self.llm_config["config"]
+        
+        # Inicializar cliente según el proveedor
+        if self.provider == "docker":
+            logger.info(f"Inicializando Docker Model Runner: {self.config['model']}")
+            self.client = openai.OpenAI(
+                base_url=self.config["base_url"],
+                api_key=self.config["api_key"]
+            )
+        elif self.provider == "openai":
+            logger.info("Inicializando OpenAI API")
+            self.client = openai.OpenAI(api_key=self.config["api_key"])
+        
         self.missions_dir = get_missions_directory()
         self.cartography_dir = os.path.join(get_project_root(), "cartography")
         self.current_mission = None
@@ -114,6 +130,46 @@ class LLMMissionPlanner:
         
         # Crear directorio de cartografía si no existe
         os.makedirs(self.cartography_dir, exist_ok=True)
+        
+        logger.info(f"LLM Mission Planner inicializado con proveedor: {self.provider}")
+    
+    def _create_chat_completion(self, messages: List[Dict], temperature: float = None) -> str:
+        """
+        Crea una completion de chat usando el proveedor configurado.
+        
+        Args:
+            messages: Lista de mensajes para el chat
+            temperature: Temperatura para la generación (opcional)
+            
+        Returns:
+            str: Contenido de la respuesta
+        """
+        temp = temperature if temperature is not None else self.config["temperature"]
+        
+        try:
+            if self.provider == "docker":
+                # Para Docker Models, usar el modelo configurado
+                response = self.client.chat.completions.create(
+                    model=self.config["model"],
+                    messages=messages,
+                    temperature=temp,
+                    max_tokens=self.config["max_tokens"],
+                    timeout=self.config.get("timeout", 60)
+                )
+            elif self.provider == "openai":
+                # Para OpenAI, usar el modelo configurado
+                response = self.client.chat.completions.create(
+                    model=self.config["model"],
+                    messages=messages,
+                    temperature=temp,
+                    max_tokens=self.config["max_tokens"]
+                )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            logger.error(f"Error en {self.provider} chat completion: {e}")
+            raise
     
     def load_cartography(self, file_path: str, area_name: str) -> bool:
         """
@@ -218,7 +274,6 @@ class LLMMissionPlanner:
             # Obtener información del área si está disponible
             area_info = ""
             center_coordinates = None
-            boundary_coordinates = None
             
             if area_name and area_name in self.loaded_areas:
                 area = self.loaded_areas[area_name]
@@ -244,7 +299,7 @@ class LLMMissionPlanner:
                 - Genera waypoints en un radio máximo de 2km desde el centro
                 """
             
-            # Prompt mejorado para el LLM
+            # Prompt optimizado para modelos locales (más directo y claro)
             system_prompt = """
             Eres un experto piloto de drones militar con conocimientos avanzados en planificación de misiones.
             Tu tarea es convertir comandos en lenguaje natural en misiones de vuelo específicas.
@@ -256,14 +311,29 @@ class LLMMissionPlanner:
             4. Usa las coordenadas del centro como referencia principal
             5. Genera waypoints realistas para la zona geográfica indicada
             
+            REGLAS CRÍTICAS PARA WAYPOINTS:
+            1. CADA waypoint DEBE tener coordenadas GPS DIFERENTES y ÚNICAS
+            2. Los waypoints deben estar GEOGRÁFICAMENTE DISTRIBUIDOS (mínimo 50-100 metros entre cada uno)
+            3. Si el comando menciona "waypoint 1, 2, 3" debes crear una RUTA con puntos intermedios diferentes
+            4. NUNCA repitas las mismas coordenadas exactas en múltiples waypoints
+            5. Crea una ruta lógica con puntos progresivos hacia el destino
+            
+            EJEMPLOS DE WAYPOINTS CORRECTOS:
+            - Waypoint 1: lat: 40.416775, lng: -3.703790
+            - Waypoint 2: lat: 40.417200, lng: -3.702500 (100m al noreste)  
+            - Waypoint 3: lat: 40.417800, lng: -3.703200 (150m al norte)
+            
+            EJEMPLOS DE WAYPOINTS INCORRECTOS (NO HAGAS ESTO):
+            - Todos los waypoints con las mismas coordenadas exactas
+            
             Debes generar waypoints con coordenadas GPS precisas, altitudes apropiadas y acciones específicas.
             Considera factores como seguridad, eficiencia de combustible, cobertura del área y objetivos tácticos.
             
-            Responde ÚNICAMENTE con un JSON válido con esta estructura:
+            Responde ÚNICAMENTE con un JSON válido con esta estructura exacta:
             {
                 "mission_name": "string",
                 "description": "string", 
-                "estimated_duration": "number (minutos)",
+                "estimated_duration": number,
                 "waypoints": [
                     {
                         "latitude": number,
@@ -290,17 +360,14 @@ class LLMMissionPlanner:
             Genera una misión detallada para este comando usando las coordenadas específicas del área.
             """
             
-            response = self.client.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.3
-            )
+            # Usar el método unificado para crear chat completion
+            response_content = self._create_chat_completion([
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ], temperature=0.3)
             
             # Parsear respuesta JSON
-            mission_data = extract_json_from_response(response.choices[0].message.content)
+            mission_data = extract_json_from_response(response_content)
             
             # Añadir metadatos
             mission_data['id'] = str(uuid.uuid4())
@@ -308,6 +375,8 @@ class LLMMissionPlanner:
             mission_data['status'] = 'planned'
             mission_data['area_name'] = area_name
             mission_data['original_command'] = natural_command
+            mission_data['llm_provider'] = self.provider
+            mission_data['llm_model'] = self.config["model"]
             
             # Añadir coordenadas del centro si están disponibles
             if center_coordinates:
@@ -322,10 +391,11 @@ class LLMMissionPlanner:
                 json.dump(mission_data, f, indent=2)
             
             self.current_mission = mission_data
+            logger.info(f"Misión creada exitosamente con {self.provider}: {mission_data['mission_name']}")
             return mission_data
             
         except Exception as e:
-            print(f"Error creando misión: {e}")
+            logger.error(f"Error creando misión con {self.provider}: {e}")
             return None
     
     def adaptive_mission_control(self, current_position: Tuple[float, float], 
@@ -352,12 +422,12 @@ class LLMMissionPlanner:
             Basándote en la situación actual y la misión original, debes decidir si continuar, 
             modificar la ruta, cambiar prioridades o abortar la misión.
             
-            Responde con JSON:
+            Responde con JSON válido:
             {
                 "decision": "continue|modify|abort|investigate",
                 "reasoning": "string",
-                "new_waypoints": [...], // si aplica
-                "priority_change": "string", // si aplica
+                "new_waypoints": [],
+                "priority_change": "string",
                 "immediate_action": "string"
             }
             """
@@ -371,19 +441,15 @@ class LLMMissionPlanner:
             ¿Qué decisión tomas?
             """
             
-            response = self.client.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.2
-            )
+            response_content = self._create_chat_completion([
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ], temperature=0.2)
             
-            return extract_json_from_response(response.choices[0].message.content)
+            return extract_json_from_response(response_content)
             
         except Exception as e:
-            print(f"Error en control adaptativo: {e}")
+            logger.error(f"Error en control adaptativo con {self.provider}: {e}")
             return {"decision": "continue", "reasoning": "Error en análisis"}
     
     def get_available_missions(self) -> List[Dict]:

@@ -237,17 +237,17 @@ class DJIDroneController(BaseDrone):
             
     def _execute_waypoints(self, waypoints: List[Dict[str, Any]]) -> bool:
         """Ejecuta todos los waypoints de la misión."""
-            for i, waypoint in enumerate(waypoints):
-                logger.info(f"Navegando al waypoint {i+1}/{len(waypoints)}")
-                
-                # Mover a cada waypoint
-                self.move_to(
-                    waypoint["latitude"], 
-                    waypoint["longitude"], 
-                    waypoint["altitude"]
-                )
-                
-                # Ejecutar acciones en este waypoint
+        for i, waypoint in enumerate(waypoints):
+            logger.info(f"Navegando al waypoint {i+1}/{len(waypoints)}")
+            
+            # Mover a cada waypoint
+            self.move_to(
+                waypoint["latitude"], 
+                waypoint["longitude"], 
+                waypoint["altitude"]
+            )
+            
+            # Ejecutar acciones en este waypoint
             self._execute_waypoint_actions(waypoint)
         
         logger.info("Misión completada con éxito")
@@ -255,8 +255,8 @@ class DJIDroneController(BaseDrone):
     
     def _execute_waypoint_actions(self, waypoint: Dict[str, Any]) -> None:
         """Ejecuta las acciones específicas de un waypoint."""
-                actions = waypoint.get("actions", [])
-                for action in actions:
+        actions = waypoint.get("actions", [])
+        for action in actions:
             self._execute_single_action(action)
     
     def _execute_single_action(self, action: Dict[str, Any]) -> None:
@@ -264,10 +264,10 @@ class DJIDroneController(BaseDrone):
         action_type = action["type"]
         
         if action_type == "capture_image":
-                        self.capture_image()
+            self.capture_image()
         elif action_type == "start_video":
-                        self.start_video_stream()
+            self.start_video_stream()
         elif action_type == "stop_video":
-                        self.stop_video_stream()
+            self.stop_video_stream()
         elif action_type == "wait":
-                        time.sleep(action["duration"])
+            time.sleep(action["duration"])

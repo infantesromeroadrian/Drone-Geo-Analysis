@@ -98,35 +98,35 @@ class GeoAnalyzer:
         
     def _create_vision_request(self, base64_image: str, metadata: Dict[str, Any], image_format: str):
         """Crea la solicitud a la API de visión."""
-            system_prompt = self._build_system_prompt()
-            user_prompt = self._build_user_prompt(metadata)
-            
+        system_prompt = self._build_system_prompt()
+        user_prompt = self._build_user_prompt(metadata)
+        
         return self.client.chat.completions.create(
-                model=self.config["model"],
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": [
-                        {"type": "text", "text": user_prompt},
-                        {"type": "image_url", 
+            model=self.config["model"],
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": [
+                    {"type": "text", "text": user_prompt},
+                    {"type": "image_url", 
                      "image_url": {"url": f"data:image/{image_format};base64,{base64_image}"}}
-                    ]}
-                ],
-                temperature=self.config["temperature"],
-                max_tokens=self.config["max_tokens"],
-            )
+                ]}
+            ],
+            temperature=self.config["temperature"],
+            max_tokens=self.config["max_tokens"],
+        )
             
     def _create_error_response(self, error_message: str) -> Dict[str, Any]:
         """Crea una respuesta de error estandarizada."""
-            return {
+        return {
             "error": error_message,
-                "country": "Error",
-                "city": "Error",
-                "district": "Error",
-                "neighborhood": "Error",
-                "street": "Error",
-                "confidence": 0,
+            "country": "Error",
+            "city": "Error",
+            "district": "Error",
+            "neighborhood": "Error",
+            "street": "Error",
+            "confidence": 0,
             "supporting_evidence": [f"Error con {self.provider}: {error_message}"]
-            }
+        }
     
     def _build_system_prompt(self) -> str:
         """Construye el prompt de sistema para la API."""
@@ -229,27 +229,27 @@ class GeoAnalyzer:
     def _parse_json_response(self, content: str) -> Dict[str, Any]:
         """Parsea el contenido JSON de la respuesta."""
         # Extraer JSON de marcadores de código
-            json_match = re.search(r'```json\s*([\s\S]*?)\s*```', content)
+        json_match = re.search(r'```json\s*([\s\S]*?)\s*```', content)
+        if json_match:
+            content = json_match.group(1)
+        else:
+            # Intentar extraer JSON sin formato
+            json_match = re.search(r'({[\s\S]*})', content)
             if json_match:
                 content = json_match.group(1)
-            else:
-                # Intentar extraer JSON sin formato
-                json_match = re.search(r'({[\s\S]*})', content)
-                if json_match:
-                    content = json_match.group(1)
-            
+        
         return json.loads(content)
             
     def _create_parsing_error_response(self, error_message: str, raw_content: str) -> Dict[str, Any]:
         """Crea una respuesta de error de parsing."""
-            return {
+        return {
             "error": f"Error al procesar la respuesta: {error_message}",
-                "country": "Error de formato",
-                "city": "Error de formato",
-                "district": "Error de formato",
-                "neighborhood": "Error de formato",
-                "street": "Error de formato",
-                "confidence": 0,
-                "supporting_evidence": [],
+            "country": "Error de formato",
+            "city": "Error de formato",
+            "district": "Error de formato",
+            "neighborhood": "Error de formato",
+            "street": "Error de formato",
+            "confidence": 0,
+            "supporting_evidence": [],
             "raw_response": raw_content
-            } 
+        } 

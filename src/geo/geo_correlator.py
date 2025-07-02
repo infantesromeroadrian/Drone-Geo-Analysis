@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class GeoCorrelator:
     """Correlaciona imágenes del dron con referencias satelitales."""
     
-    def __init__(self, api_key: str = None, satellite_api_url: str = None):
+    def __init__(self, api_key: Optional[str] = None, satellite_api_url: Optional[str] = None):
         """
         Inicializa el correlador geográfico.
         

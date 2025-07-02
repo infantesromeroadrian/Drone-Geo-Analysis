@@ -11,7 +11,29 @@ from typing import Dict, Any, List, Tuple, Optional
 logger = logging.getLogger(__name__)
 
 class BaseDrone(ABC):
-    """Clase base abstracta para todos los controladores de drones."""
+    """
+    Abstract Factory pattern for drone controllers.
+    
+    This class implements the Abstract Factory design pattern to provide
+    a uniform interface for controlling different drone manufacturers' hardware.
+    
+    Pattern Components:
+    - BaseDrone: Abstract Factory interface defining common operations
+    - Concrete Implementations: DJIDroneController, ParrotController, etc.
+    - Products: Consistent drone control operations across hardware
+    
+    Design Rationale:
+    - Enables easy integration of new drone manufacturers
+    - Provides consistent API regardless of underlying hardware
+    - Facilitates testing with mock implementations
+    - Supports hot-swapping of drone types in missions
+    
+    Usage:
+        drone = DJIDroneController()  # Concrete factory
+        drone.connect()
+        drone.take_off(50)
+        drone.capture_image()
+    """
     
     @abstractmethod
     def connect(self) -> bool:

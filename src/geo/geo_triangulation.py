@@ -65,21 +65,49 @@ class GeoTriangulation:
         Returns:
             Posición calculada y metadatos
         """
-        if target_id not in self.observations or len(self.observations[target_id]) < 2:
-            return {
-                "error": f"Se requieren al menos 2 observaciones (actual: {len(self.observations.get(target_id, []))})"
-            }
+        # Validar datos de entrada
+        validation_result = self._validate_observations(target_id)
+        if "error" in validation_result:
+            return validation_result
         
         observations = self.observations[target_id]
         
-        # En un sistema real, implementaríamos un algoritmo de triangulación completo
-        # Por simplicidad, simulamos un resultado basado en las observaciones
+        # Extraer y procesar datos de observaciones
+        observation_data = self._extract_observation_data(observations)
         
-        # Extraer posiciones y direcciones
+        # Calcular estimaciones de posición
+        estimated_points = self._calculate_estimated_points(observation_data)
+        
+        # Calcular promedio ponderado
+        weighted_position = self._calculate_weighted_average(
+            estimated_points, observation_data["weights"]
+        )
+        
+        # Calcular métricas de precisión
+        precision_metrics = self._calculate_precision_metrics(
+            estimated_points, weighted_position, len(observations)
+        )
+        
+        # Construir resultado final
+        return self._build_result(target_id, weighted_position, precision_metrics, len(observations))
+    
+    def _validate_observations(self, target_id: str) -> Dict[str, Any]:
+        """Valida que existan suficientes observaciones."""
+        if target_id not in self.observations:
+            return {"error": f"Objetivo {target_id} no encontrado"}
+        
+        observation_count = len(self.observations[target_id])
+        if observation_count < 2:
+            return {"error": f"Se requieren al menos 2 observaciones (actual: {observation_count})"}
+        
+        return {"valid": True}
+    
+    def _extract_observation_data(self, observations: List[Dict]) -> Dict[str, np.ndarray]:
+        """Extrae datos relevantes de las observaciones."""
         positions = []
         bearings = []
         elevations = []
-        weights = []  # Basados en la confianza
+        weights = []
         
         for obs in observations:
             pos = obs["drone_position"]
@@ -88,85 +116,106 @@ class GeoTriangulation:
             elevations.append(obs["target_elevation"])
             weights.append(obs["confidence"])
         
-        # Convertir a arrays de numpy
-        positions = np.array(positions)
-        bearings = np.array(bearings)
-        elevations = np.array(elevations)
-        weights = np.array(weights)
+        return {
+            "positions": np.array(positions),
+            "bearings": np.array(bearings),
+            "elevations": np.array(elevations),
+            "weights": np.array(weights)
+        }
+    
+    def _calculate_estimated_points(self, observation_data: Dict[str, np.ndarray]) -> np.ndarray:
+        """Calcula puntos estimados de posición desde cada observación."""
+        positions = observation_data["positions"]
+        bearings = observation_data["bearings"]
+        elevations = observation_data["elevations"]
         
-        # Calcular promedios ponderados para una estimación simple
-        # (Una implementación real utilizaría un algoritmo más sofisticado)
-        
-        # Normalizar pesos
-        weights = weights / np.sum(weights)
-        
-        # Calculamos un punto aproximado extrapolando desde cada observación
-        # y luego promediando los resultados
         earth_radius = 6371000  # Radio de la Tierra en metros
-        
         estimated_points = []
         
-        for i in range(len(observations)):
+        for i in range(len(positions)):
             lat, lon, alt = positions[i]
             bearing = np.radians(bearings[i])
             elevation = np.radians(elevations[i])
             
-            # Calcular distancia estimada al objetivo basada en la elevación y altitud
-            if elevation > 0:
-                # Si el objetivo está por encima del horizonte
-                distance = alt / np.sin(elevation)
-            else:
-                # Si el objetivo está por debajo del horizonte
-                # Estimación simplificada
-                distance = 1000  # metros, valor arbitrario
+            # Calcular distancia estimada
+            distance = self._estimate_distance(alt, elevation)
             
-            # Limitar distancia a un valor razonable
-            distance = min(distance, 10000)  # máximo 10km
+            # Calcular nueva posición
+            target_coords = self._calculate_target_coordinates(
+                lat, lon, bearing, distance, earth_radius
+            )
             
-            # Convertir coordenadas a radianes
-            lat_rad = np.radians(lat)
-            lon_rad = np.radians(lon)
-            
-            # Calcular la nueva posición
-            # Fórmula simplificada, no consideramos curvatura de la Tierra para distancias cortas
-            target_lat_rad = lat_rad + (distance / earth_radius) * np.cos(bearing)
-            target_lon_rad = lon_rad + (distance / earth_radius) * np.sin(bearing) / np.cos(lat_rad)
-            
-            # Convertir de vuelta a grados
-            target_lat = np.degrees(target_lat_rad)
-            target_lon = np.degrees(target_lon_rad)
-            
-            estimated_points.append([target_lat, target_lon])
+            estimated_points.append(target_coords)
         
-        # Convertir a array y calcular promedio ponderado
-        estimated_points = np.array(estimated_points)
-        weighted_avg = np.average(estimated_points, axis=0, weights=weights)
+        return np.array(estimated_points)
+    
+    def _estimate_distance(self, altitude: float, elevation: float) -> float:
+        """Estima la distancia al objetivo basada en altitud y elevación."""
+        if elevation > 0:
+            distance = altitude / np.sin(elevation)
+        else:
+            distance = 1000  # Valor por defecto para objetivos bajo el horizonte
         
-        # Calcular una estimación de precisión basada en la dispersión de los puntos
-        # y el número de observaciones
-        distances = np.linalg.norm(estimated_points - weighted_avg, axis=1)
-        max_distance = np.max(distances)  # Máxima desviación
-        avg_distance = np.average(distances)  # Desviación promedio
-        num_observations = len(observations)
+        # Limitar a un valor razonable
+        return min(distance, 10000)  # Máximo 10km
+    
+    def _calculate_target_coordinates(self, lat: float, lon: float, bearing: float, 
+                                    distance: float, earth_radius: float) -> List[float]:
+        """Calcula coordenadas del objetivo usando fórmulas geográficas simplificadas."""
+        lat_rad = np.radians(lat)
+        lon_rad = np.radians(lon)
         
-        # Precision improves with more observations but is limited by observation quality
-        precision = 100 * (1 - avg_distance / 0.001) * np.tanh(num_observations / 3)
-        precision = max(0, min(99, precision))  # Limitar entre 0 y 99%
+        # Fórmula simplificada para distancias cortas
+        target_lat_rad = lat_rad + (distance / earth_radius) * np.cos(bearing)
+        target_lon_rad = lon_rad + (distance / earth_radius) * np.sin(bearing) / np.cos(lat_rad)
         
-        # Resultado final
+        # Convertir de vuelta a grados
+        target_lat = np.degrees(target_lat_rad)
+        target_lon = np.degrees(target_lon_rad)
+        
+        return [target_lat, target_lon]
+    
+    def _calculate_weighted_average(self, estimated_points: np.ndarray, 
+                                  weights: np.ndarray) -> np.ndarray:
+        """Calcula el promedio ponderado de los puntos estimados."""
+        # Normalizar pesos
+        normalized_weights = weights / np.sum(weights)
+        
+        # Calcular promedio ponderado
+        return np.average(estimated_points, axis=0, weights=normalized_weights)
+    
+    def _calculate_precision_metrics(self, estimated_points: np.ndarray, 
+                                   weighted_position: np.ndarray, 
+                                   num_observations: int) -> Dict[str, float]:
+        """Calcula métricas de precisión basadas en la dispersión de puntos."""
+        # Calcular distancias desde el promedio
+        distances = np.linalg.norm(estimated_points - weighted_position, axis=1)
+        
+        max_distance = np.max(distances)
+        avg_distance = np.average(distances)
+        
+        # Calcular confianza basada en dispersión y número de observaciones
+        precision_confidence = 100 * (1 - avg_distance / 0.001) * np.tanh(num_observations / 3)
+        precision_confidence = max(0, min(99, precision_confidence))
+        
+        return {
+            "meters": float(avg_distance * 111000),  # Conversión aproximada a metros
+            "confidence": float(precision_confidence),
+            "max_deviation_meters": float(max_distance * 111000)
+        }
+    
+    def _build_result(self, target_id: str, weighted_position: np.ndarray, 
+                     precision_metrics: Dict[str, float], observation_count: int) -> Dict[str, Any]:
+        """Construye el resultado final de la triangulación."""
         result = {
             "target_id": target_id,
             "position": {
-                "latitude": float(weighted_avg[0]),
-                "longitude": float(weighted_avg[1]),
+                "latitude": float(weighted_position[0]),
+                "longitude": float(weighted_position[1]),
                 "altitude": 0  # No estimamos altitud en este ejemplo simplificado
             },
-            "precision": {
-                "meters": float(avg_distance * 111000),  # Conversión aproximada a metros
-                "confidence": float(precision),
-                "max_deviation_meters": float(max_distance * 111000)
-            },
-            "observations_count": num_observations,
+            "precision": precision_metrics,
+            "observations_count": observation_count,
             "timestamp": time.time()
         }
         

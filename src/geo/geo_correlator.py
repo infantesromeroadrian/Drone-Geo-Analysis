@@ -27,16 +27,22 @@ class GeoCorrelator:
         """
         self.api_key = api_key or os.environ.get("SATELLITE_API_KEY", "")
         self.satellite_api_url = satellite_api_url or "https://api.satellite-imagery.com/v1"
-        self.cache_dir = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-            "cache", "satellite"
-        )
-        
-        # Crear directorio de caché si no existe
-        if not os.path.exists(self.cache_dir):
-            os.makedirs(self.cache_dir)
+        self.cache_dir = self._setup_cache_directory()
         
         logger.info("Correlador geográfico inicializado")
+    
+    def _setup_cache_directory(self) -> str:
+        """Configura y crea el directorio de caché."""
+        # Usar directorio raíz del proyecto de forma más robusta
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(os.path.dirname(current_dir))
+        cache_dir = os.path.join(project_root, "cache", "satellite")
+        
+        # Crear directorio si no existe
+        if not os.path.exists(cache_dir):
+            os.makedirs(cache_dir)
+            
+        return cache_dir
     
     def get_satellite_image(self, latitude: float, longitude: float, 
                           zoom_level: int = 17) -> Optional[bytes]:
@@ -52,53 +58,34 @@ class GeoCorrelator:
             Datos de la imagen satelital en bytes o None
         """
         try:
-            # Comprobar si ya existe en caché
-            cache_file = os.path.join(
-                self.cache_dir, 
-                f"sat_{latitude:.5f}_{longitude:.5f}_{zoom_level}.jpg"
-            )
+            cache_file = self._get_cache_filename(latitude, longitude, zoom_level)
             
-            if os.path.exists(cache_file):
-                with open(cache_file, 'rb') as f:
-                    return f.read()
+            # Comprobar caché primero
+            cached_image = self._load_from_cache(cache_file)
+            if cached_image:
+                return cached_image
             
-            # Simulamos la obtención de una imagen satelital
-            # En una implementación real, haríamos una solicitud HTTP a un servicio de imágenes satelitales
+            # Simular obtención de imagen satelital
             logger.info(f"Simulando obtención de imagen satelital para: {latitude}, {longitude}")
-            
-            # Para este prototipo, simplemente devolvemos un mensaje informativo
-            # y devolvemos None como si no se pudiera obtener la imagen
-            return None
-            
-            # La implementación real sería algo así:
-            """
-            # Construir URL de la API
-            url = f"{self.satellite_api_url}/imagery"
-            params = {
-                "api_key": self.api_key,
-                "lat": latitude,
-                "lng": longitude,
-                "zoom": zoom_level,
-                "format": "jpeg"
-            }
-            
-            # Realizar solicitud
-            response = requests.get(url, params=params)
-            if response.status_code != 200:
-                logger.error(f"Error al obtener imagen satelital: {response.status_code}")
-                return None
-            
-            # Guardar en caché
-            with open(cache_file, 'wb') as f:
-                f.write(response.content)
-            
-            logger.info(f"Imagen satelital obtenida para: {latitude}, {longitude}")
-            return response.content
-            """
+            return None  # Prototipo - implementación real pendiente
             
         except Exception as e:
             logger.error(f"Error al obtener imagen satelital: {str(e)}")
             return None
+    
+    def _get_cache_filename(self, latitude: float, longitude: float, zoom_level: int) -> str:
+        """Genera nombre de archivo para caché."""
+        return os.path.join(
+            self.cache_dir, 
+            f"sat_{latitude:.5f}_{longitude:.5f}_{zoom_level}.jpg"
+        )
+    
+    def _load_from_cache(self, cache_file: str) -> Optional[bytes]:
+        """Carga imagen desde caché si existe."""
+        if os.path.exists(cache_file):
+            with open(cache_file, 'rb') as f:
+                return f.read()
+        return None
     
     def correlate_drone_image(self, drone_image: bytes, drone_telemetry: Dict[str, Any], 
                             confidence_threshold: float = 0.6) -> Dict[str, Any]:
@@ -114,63 +101,88 @@ class GeoCorrelator:
             Resultados de la correlación
         """
         try:
-            # Extraer coordenadas de la telemetría
-            gps = drone_telemetry.get("gps", {})
-            latitude = gps.get("latitude")
-            longitude = gps.get("longitude")
-            altitude = drone_telemetry.get("altitude", 0)
+            # Validar datos GPS
+            gps_data = self._extract_gps_data(drone_telemetry)
+            if "error" in gps_data:
+                return gps_data
             
-            if not latitude or not longitude:
-                return {"error": "Datos GPS no disponibles en telemetría"}
+            # Obtener imagen satelital de referencia
+            satellite_image = self.get_satellite_image(
+                gps_data["latitude"], gps_data["longitude"]
+            )
             
-            # Obtener imagen satelital para las coordenadas
-            satellite_image = self.get_satellite_image(latitude, longitude)
-            if not satellite_image:
-                logger.warning("No se pudo obtener imagen satelital de referencia")
-                # Podemos continuar con una confianza reducida
+            # Realizar correlación
+            correlation_result = self._perform_correlation(
+                drone_image, satellite_image, gps_data, drone_telemetry
+            )
             
-            # Calcular el área de cobertura basada en la altitud
-            # (simplificación: a mayor altitud, mayor área visible)
-            coverage_radius = altitude * 0.5  # Aproximadamente en metros
+            # Evaluar confianza y agregar metadata
+            return self._finalize_correlation_result(
+                correlation_result, confidence_threshold
+            )
             
-            # Aquí iría la lógica real de correlación entre imágenes
-            # Opciones: SIFT, ORB, template matching, deep learning, etc.
-            # Por simplicidad, simulamos un resultado
-            
-            # Simular un resultado de correlación
-            correlation_confidence = 0.85  # Simulado
-            
-            # Ajustar coordenadas basadas en la correlación
-            # (En una implementación real, esto ajustaría la posición basada en la correlación visual)
-            corrected_coordinates = {
-                "latitude": latitude + 0.0001,  # Ajuste simulado
-                "longitude": longitude - 0.0002  # Ajuste simulado
-            }
-            
-            result = {
-                "original_coordinates": {
-                    "latitude": latitude,
-                    "longitude": longitude
-                },
-                "corrected_coordinates": corrected_coordinates,
-                "confidence": correlation_confidence,
-                "coverage_radius_meters": coverage_radius,
-                "timestamp": time.time()
-            }
-            
-            # Añadir información adicional si la confianza es alta
-            if correlation_confidence >= confidence_threshold:
-                result["status"] = "high_confidence"
-                result["message"] = "Correlación exitosa"
-            else:
-                result["status"] = "low_confidence"
-                result["message"] = "Correlación débil, usar con precaución"
-            
-            logger.info(f"Correlación completada con confianza: {correlation_confidence:.2f}")
-            return result
         except Exception as e:
             logger.error(f"Error en correlación de imagen: {str(e)}")
             return {"error": str(e)}
+    
+    def _extract_gps_data(self, drone_telemetry: Dict[str, Any]) -> Dict[str, Any]:
+        """Extrae y valida datos GPS de la telemetría."""
+        gps = drone_telemetry.get("gps", {})
+        latitude = gps.get("latitude")
+        longitude = gps.get("longitude")
+        
+        if not latitude or not longitude:
+            return {"error": "Datos GPS no disponibles en telemetría"}
+        
+        return {
+            "latitude": latitude,
+            "longitude": longitude,
+            "altitude": drone_telemetry.get("altitude", 0)
+        }
+    
+    def _perform_correlation(self, drone_image: bytes, satellite_image: Optional[bytes], 
+                           gps_data: Dict[str, float], drone_telemetry: Dict[str, Any]) -> Dict[str, Any]:
+        """Realiza la correlación entre imágenes."""
+        if not satellite_image:
+            logger.warning("No se pudo obtener imagen satelital de referencia")
+        
+        # Calcular área de cobertura
+        coverage_radius = gps_data["altitude"] * 0.5  # Simplificado
+        
+        # Simular correlación (implementación real pendiente)
+        correlation_confidence = 0.85
+        
+        # Generar coordenadas corregidas
+        corrected_coordinates = {
+            "latitude": gps_data["latitude"] + 0.0001,
+            "longitude": gps_data["longitude"] - 0.0002
+        }
+        
+        return {
+            "original_coordinates": {
+                "latitude": gps_data["latitude"],
+                "longitude": gps_data["longitude"]
+            },
+            "corrected_coordinates": corrected_coordinates,
+            "confidence": correlation_confidence,
+            "coverage_radius_meters": coverage_radius,
+            "timestamp": time.time()
+        }
+    
+    def _finalize_correlation_result(self, result: Dict[str, Any], 
+                                   confidence_threshold: float) -> Dict[str, Any]:
+        """Finaliza el resultado con metadata de confianza."""
+        confidence = result["confidence"]
+        
+        if confidence >= confidence_threshold:
+            result["status"] = "high_confidence"
+            result["message"] = "Correlación exitosa"
+        else:
+            result["status"] = "low_confidence"
+            result["message"] = "Correlación débil, usar con precaución"
+        
+        logger.info(f"Correlación completada con confianza: {confidence:.2f}")
+        return result
     
     def calculate_real_coordinates(self, pixel_coords: Tuple[int, int], 
                                  drone_telemetry: Dict[str, Any]) -> Dict[str, float]:
@@ -185,41 +197,68 @@ class GeoCorrelator:
             Coordenadas reales {latitude, longitude}
         """
         # Extraer datos de telemetría
+        telemetry_data = self._extract_telemetry_data(drone_telemetry)
+        
+        # Calcular transformación de coordenadas
+        return self._transform_pixel_to_coordinates(pixel_coords, telemetry_data)
+    
+    def _extract_telemetry_data(self, drone_telemetry: Dict[str, Any]) -> Dict[str, Any]:
+        """Extrae datos relevantes de la telemetría."""
         gps = drone_telemetry.get("gps", {})
-        latitude = gps.get("latitude", 0)
-        longitude = gps.get("longitude", 0)
-        altitude = drone_telemetry.get("altitude", 100)
         orientation = drone_telemetry.get("orientation", {"yaw": 0, "pitch": 0, "roll": 0})
         
-        # Aquí iría el algoritmo real de proyección
-        # Por simplicidad, simulamos un cálculo básico
-        
-        # Simular un desplazamiento basado en píxeles
-        # (esto es muy simplificado, en la realidad se necesita calibración de cámara y geometría proyectiva)
+        return {
+            "latitude": gps.get("latitude", 0),
+            "longitude": gps.get("longitude", 0),
+            "altitude": drone_telemetry.get("altitude", 100),
+            "yaw": orientation.get("yaw", 0),
+            "pitch": orientation.get("pitch", 0),
+            "roll": orientation.get("roll", 0)
+        }
+    
+    def _transform_pixel_to_coordinates(self, pixel_coords: Tuple[int, int], 
+                                      telemetry_data: Dict[str, Any]) -> Dict[str, float]:
+        """Transforma coordenadas de píxel a coordenadas GPS."""
         x, y = pixel_coords
         
-        # Factor de escala basado en la altitud (muy simplificado)
-        scale_factor = altitude / 1000  # metros por píxel a la altitud dada
+        # Calcular factor de escala basado en altitud
+        scale_factor = telemetry_data["altitude"] / 1000  # Simplificado
         
-        # Ajustar por orientación del dron (muy simplificado)
-        yaw_rad = np.radians(orientation.get("yaw", 0))
+        # Aplicar rotación por orientación del dron
+        rotated_coords = self._apply_rotation(x, y, telemetry_data["yaw"])
         
-        # Transformar las coordenadas de píxel considerando la rotación
-        x_rotated = x * np.cos(yaw_rad) - y * np.sin(yaw_rad)
-        y_rotated = x * np.sin(yaw_rad) + y * np.cos(yaw_rad)
+        # Convertir a offset de coordenadas
+        lat_offset, lng_offset = self._calculate_coordinate_offsets(
+            rotated_coords, scale_factor
+        )
         
-        # Convertir a cambio en coordenadas (muy simplificado)
-        # En realidad, se necesita considerar la proyección de la Tierra
-        lat_offset = y_rotated * scale_factor * 0.00001  # Factor arbitrario para simulación
-        lng_offset = x_rotated * scale_factor * 0.00001  # Factor arbitrario para simulación
-        
-        # Calcular coordenadas resultantes
-        target_latitude = latitude - lat_offset  # Invertido porque y crece hacia abajo en imágenes
-        target_longitude = longitude + lng_offset
+        # Calcular coordenadas finales
+        target_latitude = telemetry_data["latitude"] - lat_offset
+        target_longitude = telemetry_data["longitude"] + lng_offset
         
         return {
             "latitude": target_latitude,
             "longitude": target_longitude,
-            "altitude": altitude,
-            "accuracy_meters": scale_factor * 10  # Estimación de precisión
-        } 
+            "altitude": telemetry_data["altitude"],
+            "accuracy_meters": scale_factor * 10
+        }
+    
+    def _apply_rotation(self, x: float, y: float, yaw_degrees: float) -> Tuple[float, float]:
+        """Aplica rotación por orientación del dron."""
+        yaw_rad = np.radians(yaw_degrees)
+        
+        x_rotated = x * np.cos(yaw_rad) - y * np.sin(yaw_rad)
+        y_rotated = x * np.sin(yaw_rad) + y * np.cos(yaw_rad)
+        
+        return x_rotated, y_rotated
+    
+    def _calculate_coordinate_offsets(self, rotated_coords: Tuple[float, float], 
+                                    scale_factor: float) -> Tuple[float, float]:
+        """Calcula offsets de coordenadas GPS."""
+        x_rotated, y_rotated = rotated_coords
+        
+        # Factores simplificados para simulación
+        lat_offset = y_rotated * scale_factor * 0.00001
+        lng_offset = x_rotated * scale_factor * 0.00001
+        
+        return lat_offset, lng_offset 

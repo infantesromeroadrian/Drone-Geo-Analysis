@@ -42,5 +42,5 @@ ENV PYTHONPATH=/app
 # Expose port
 EXPOSE 5000
 
-# Default command (src/app.py will be mounted from host)
-CMD ["python", "src/app.py"] 
+# Use new refactored main.py instead of old app.py
+CMD ["python", "src/main.py"] 

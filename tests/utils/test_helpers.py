@@ -45,9 +45,16 @@ def temp_image_file():
 # Tests para encode_image_to_base64
 def test_encode_image_to_base64_success(temp_image_file):
     """Prueba la codificación exitosa de una imagen a base64."""
-    encoded = encode_image_to_base64(temp_image_file)
-    assert encoded is not None
+    result = encode_image_to_base64(temp_image_file)
+    assert result is not None
+    assert isinstance(result, tuple)
+    assert len(result) == 2
+    
+    encoded, image_format = result
     assert isinstance(encoded, str)
+    assert isinstance(image_format, str)
+    assert image_format in ['jpeg', 'png', 'gif', 'webp']
+    
     # Verificar que es una cadena base64 válida
     try:
         base64.b64decode(encoded)

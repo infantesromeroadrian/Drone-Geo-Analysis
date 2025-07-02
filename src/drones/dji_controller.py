@@ -173,33 +173,50 @@ class DJIDroneController(BaseDrone):
             if not self.connected:
                 raise ConnectionError("Dron no conectado")
             
-            # Simulación de datos de telemetría usando posición dinámica
-            telemetry = {
-                "battery": 75,  # Porcentaje de batería
-                "gps": {
-                    "latitude": self.current_position["latitude"],  # Usar posición dinámica
-                    "longitude": self.current_position["longitude"],  # Usar posición dinámica
-                    "satellites": 8,  # Número de satélites conectados
-                    "signal_quality": 4  # Calidad de señal GPS (0-5)
-                },
-                "altitude": 50.5,  # Altitud en metros
-                "speed": {
-                    "horizontal": 5.2,  # Velocidad horizontal en m/s
-                    "vertical": 0.0  # Velocidad vertical en m/s
-                },
-                "orientation": {
-                    "pitch": 0.0,  # Ángulos en grados
-                    "roll": 0.0,
-                    "yaw": 90.0
-                },
-                "signal_strength": 85,  # Porcentaje de fuerza de señal
-                "timestamp": time.time()  # Timestamp Unix
-            }
-            
-            return telemetry
+            return self._build_telemetry_data()
         except Exception as e:
             logger.error(f"Error al obtener telemetría: {str(e)}")
             return {}
+    
+    def _build_telemetry_data(self) -> Dict[str, Any]:
+        """Construye el diccionario de datos telemétricos."""
+        return {
+            "battery": self._get_battery_status(),
+            "gps": self._get_gps_data(),
+            "altitude": 50.5,
+            "speed": self._get_speed_data(),
+            "orientation": self._get_orientation_data(),
+            "signal_strength": 85,
+            "timestamp": time.time()
+        }
+    
+    def _get_battery_status(self) -> int:
+        """Obtiene el estado de la batería."""
+        return 75  # Porcentaje de batería
+    
+    def _get_gps_data(self) -> Dict[str, Any]:
+        """Obtiene datos GPS del dron."""
+        return {
+            "latitude": self.current_position["latitude"],
+            "longitude": self.current_position["longitude"],
+            "satellites": 8,
+            "signal_quality": 4
+        }
+    
+    def _get_speed_data(self) -> Dict[str, float]:
+        """Obtiene datos de velocidad."""
+        return {
+            "horizontal": 5.2,
+            "vertical": 0.0
+        }
+    
+    def _get_orientation_data(self) -> Dict[str, float]:
+        """Obtiene datos de orientación."""
+        return {
+            "pitch": 0.0,
+            "roll": 0.0,
+            "yaw": 90.0
+        }
     
     def execute_mission(self, mission_data: Dict[str, Any]) -> bool:
         """Ejecuta una misión pre-programada."""
@@ -213,7 +230,13 @@ class DJIDroneController(BaseDrone):
                 return False
             
             logger.info(f"Iniciando misión con {len(waypoints)} waypoints")
+            return self._execute_waypoints(waypoints)
+        except Exception as e:
+            logger.error(f"Error al ejecutar misión: {str(e)}")
+            return False
             
+    def _execute_waypoints(self, waypoints: List[Dict[str, Any]]) -> bool:
+        """Ejecuta todos los waypoints de la misión."""
             for i, waypoint in enumerate(waypoints):
                 logger.info(f"Navegando al waypoint {i+1}/{len(waypoints)}")
                 
@@ -225,19 +248,26 @@ class DJIDroneController(BaseDrone):
                 )
                 
                 # Ejecutar acciones en este waypoint
+            self._execute_waypoint_actions(waypoint)
+        
+        logger.info("Misión completada con éxito")
+        return True
+    
+    def _execute_waypoint_actions(self, waypoint: Dict[str, Any]) -> None:
+        """Ejecuta las acciones específicas de un waypoint."""
                 actions = waypoint.get("actions", [])
                 for action in actions:
-                    if action["type"] == "capture_image":
+            self._execute_single_action(action)
+    
+    def _execute_single_action(self, action: Dict[str, Any]) -> None:
+        """Ejecuta una acción individual."""
+        action_type = action["type"]
+        
+        if action_type == "capture_image":
                         self.capture_image()
-                    elif action["type"] == "start_video":
+        elif action_type == "start_video":
                         self.start_video_stream()
-                    elif action["type"] == "stop_video":
+        elif action_type == "stop_video":
                         self.stop_video_stream()
-                    elif action["type"] == "wait":
+        elif action_type == "wait":
                         time.sleep(action["duration"])
-            
-            logger.info("Misión completada con éxito")
-            return True
-        except Exception as e:
-            logger.error(f"Error al ejecutar misión: {str(e)}")
-            return False 

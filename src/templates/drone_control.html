@@ -2122,7 +2122,7 @@
                     uploadCartographyBtn.disabled = true;
                     uploadCartographyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando...';
 
-                    fetch('/api/cartography/upload', {
+                    fetch('/api/missions/cartography/upload', {
                         method: 'POST',
                         body: formData
                     })
@@ -2181,7 +2181,7 @@
                 function loadAreas() {
                     console.log('📂 Cargando áreas disponibles...');
                     
-                    fetch('/api/cartography/areas')
+                    fetch('/api/missions/cartography/areas')
                         .then(response => response.json())
                         .then(data => {
                             console.log('📋 Respuesta de áreas:', data);

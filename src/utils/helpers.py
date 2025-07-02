@@ -62,19 +62,60 @@ def get_missions_directory() -> str:
         os.makedirs(missions_dir)
     return missions_dir
 
-def encode_image_to_base64(image_path: str) -> Optional[str]:
+def encode_image_to_base64(image_path: str) -> Optional[Tuple[str, str]]:
     """
-    Convierte una imagen a formato base64 para enviar a la API.
+    Convierte una imagen a formato base64 compatible con OpenAI API.
+    Convierte automáticamente formatos no compatibles (AVIF, HEIC, etc.) a JPEG.
     
     Args:
         image_path: Ruta al archivo de imagen
         
     Returns:
-        String en formato base64 o None si hay error
+        Tuple (base64_string, format) o None si hay error
+        format puede ser: 'jpeg', 'png', 'gif', 'webp'
     """
+    # Formatos compatibles con OpenAI Vision API
+    OPENAI_COMPATIBLE_FORMATS = ['PNG', 'JPEG', 'GIF', 'WEBP']
+    
     try:
-        with open(image_path, "rb") as image_file:
-            return base64.b64encode(image_file.read()).decode('utf-8')
+        # Abrir imagen con PIL para detectar formato
+        with Image.open(image_path) as img:
+            original_format = img.format
+            logger.info(f"Formato original de imagen: {original_format}")
+            
+            # Si el formato es compatible, usar directamente
+            if original_format in OPENAI_COMPATIBLE_FORMATS:
+                with open(image_path, "rb") as image_file:
+                    base64_data = base64.b64encode(image_file.read()).decode('utf-8')
+                    return base64_data, original_format.lower()
+            
+            # Si no es compatible, convertir a JPEG
+            else:
+                logger.warning(f"Formato {original_format} no compatible con OpenAI. Convirtiendo a JPEG...")
+                
+                # Convertir RGBA a RGB si es necesario (para JPEG)
+                if img.mode in ('RGBA', 'LA'):
+                    # Crear fondo blanco
+                    background = Image.new('RGB', img.size, (255, 255, 255))
+                    if img.mode == 'RGBA':
+                        background.paste(img, mask=img.split()[-1])  # Usar canal alpha como máscara
+                    else:
+                        background.paste(img)
+                    img = background
+                elif img.mode != 'RGB':
+                    img = img.convert('RGB')
+                
+                # Guardar en memoria como JPEG
+                import io
+                buffer = io.BytesIO()
+                img.save(buffer, format='JPEG', quality=95)
+                buffer.seek(0)
+                
+                # Codificar a base64
+                base64_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                logger.info(f"Imagen convertida exitosamente de {original_format} a JPEG")
+                return base64_data, 'jpeg'
+                
     except Exception as e:
         logger.error(f"Error al codificar imagen {image_path}: {str(e)}")
         return None

@@ -1,179 +1,156 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Módulo de planificación de misiones con IA.
-Permite crear misiones inteligentes usando LLM para control de drones.
-Soporta tanto Docker Model Runner como OpenAI API.
+Planificador principal de misiones con IA.
+Clase principal que orquesta la generación de misiones usando LLM.
+Refactorizado para cumplir con principios de Single Responsibility.
 """
 
 import json
 import os
 import uuid
-import re
 import logging
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 import openai
-from dataclasses import dataclass
-import geojson
-import math
+from openai.types.chat import ChatCompletionMessageParam
 
-# Importar funciones de utilidad para rutas
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.helpers import get_missions_directory, get_project_root
-from utils.config import get_llm_config
+from src.utils.helpers import get_missions_directory, get_project_root
+from src.utils.config import get_llm_config
+from .mission_models import MissionArea
+from .mission_parser import extract_json_from_response
+from .mission_validator import validate_mission_safety
+from .mission_utils import calculate_area_center
 
 # Configurar logger
 logger = logging.getLogger(__name__)
 
-def extract_json_from_response(response_content: str) -> Dict:
-    """
-    Extrae y parsea JSON de una respuesta de LLM de manera robusta.
-    
-    Args:
-        response_content: Contenido de la respuesta del LLM
-        
-    Returns:
-        Dict: JSON parseado
-        
-    Raises:
-        ValueError: Si no se puede extraer JSON válido
-    """
-    try:
-        # Intentar parsear directamente
-        return json.loads(response_content.strip())
-    except json.JSONDecodeError:
-        pass
-    
-    try:
-        # Buscar JSON envuelto en bloques de código markdown
-        json_match = re.search(r'```json\s*([\s\S]*?)\s*```', response_content, re.IGNORECASE)
-        if json_match:
-            json_content = json_match.group(1).strip()
-            logger.info("JSON encontrado en bloque de código markdown")
-            return json.loads(json_content)
-    except json.JSONDecodeError as e:
-        logger.error(f"Error parseando JSON desde markdown: {e}")
-        pass
-    
-    try:
-        # Buscar JSON entre llaves, ignorando texto antes y después
-        json_match = re.search(r'({[\s\S]*})', response_content)
-        if json_match:
-            json_content = json_match.group(1).strip()
-            logger.info("JSON encontrado usando regex de llaves")
-            return json.loads(json_content)
-    except json.JSONDecodeError as e:
-        logger.error(f"Error parseando JSON desde regex: {e}")
-        pass
-    
-    try:
-        # Buscar cualquier cosa que parezca JSON (comenzando con { y terminando con })
-        start_idx = response_content.find('{')
-        end_idx = response_content.rfind('}')
-        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-            json_content = response_content[start_idx:end_idx+1]
-            logger.info("JSON encontrado usando índices de llaves")
-            return json.loads(json_content)
-    except json.JSONDecodeError as e:
-        logger.error(f"Error parseando JSON desde índices: {e}")
-        pass
-    
-    # Si todo falla, log el contenido completo para debug
-    logger.error(f"No se pudo extraer JSON válido de la respuesta. Contenido completo:")
-    logger.error(f"'{response_content}'")
-    raise ValueError(f"No se pudo extraer JSON válido de la respuesta del LLM")
-
-@dataclass
-class Waypoint:
-    """Clase para representar un waypoint de la misión."""
-    latitude: float
-    longitude: float
-    altitude: float
-    action: str = "navigate"  # navigate, hover, scan, land, etc.
-    duration: float = 0.0  # tiempo en segundos
-    description: str = ""
-
-@dataclass
-class MissionArea:
-    """Clase para representar un área de misión."""
-    name: str
-    boundaries: List[Tuple[float, float]]  # Lista de (lat, lng)
-    restrictions: List[str] = None
-    points_of_interest: List[Dict] = None
 
 class LLMMissionPlanner:
-    """Planificador de misiones inteligente usando LLM (Docker Models o OpenAI)."""
+    """
+    Planificador de misiones inteligente usando LLM.
+    Responsabilidad única: Generar misiones desde comandos naturales.
+    """
     
     def __init__(self):
-        """Inicializa el planificador con el proveedor de LLM configurado."""
+        """Inicializa el planificador con configuración LLM."""
         self.llm_config = get_llm_config()
         self.provider = self.llm_config["provider"]
         self.config = self.llm_config["config"]
         
-        # Inicializar cliente según el proveedor
+        # Configurar cliente y directorios
+        self._setup_client()
+        self._setup_directories()
+        
+        logger.info(f"Mission Planner inicializado: {self.provider}")
+    
+    def _setup_client(self) -> None:
+        """Configura el cliente LLM según el proveedor."""
         if self.provider == "docker":
-            logger.info(f"Inicializando Docker Model Runner: {self.config['model']}")
+            logger.info(f"Docker Model: {self.config['model']}")
             self.client = openai.OpenAI(
                 base_url=self.config["base_url"],
                 api_key=self.config["api_key"]
             )
         elif self.provider == "openai":
-            logger.info("Inicializando OpenAI API")
+            logger.info("OpenAI API configurada")
             self.client = openai.OpenAI(api_key=self.config["api_key"])
-        
+    
+    def _setup_directories(self) -> None:
+        """Configura los directorios necesarios."""
         self.missions_dir = get_missions_directory()
-        self.cartography_dir = os.path.join(get_project_root(), "cartography")
+        self.cartography_dir = os.path.join(get_project_root(), 
+                                          "cartography")
         self.current_mission = None
         self.loaded_areas = {}
         
         # Crear directorio de cartografía si no existe
         os.makedirs(self.cartography_dir, exist_ok=True)
-        
-        logger.info(f"LLM Mission Planner inicializado con proveedor: {self.provider}")
     
-    def _create_chat_completion(self, messages: List[Dict], temperature: float = None) -> str:
+    def create_mission_from_command(self, natural_command: str, 
+                                  area_name: Optional[str] = None) -> Optional[Dict]:
         """
-        Crea una completion de chat usando el proveedor configurado.
+        Crea una misión a partir de un comando en lenguaje natural.
         
         Args:
-            messages: Lista de mensajes para el chat
-            temperature: Temperatura para la generación (opcional)
+            natural_command: Comando en lenguaje natural
+            area_name: Nombre del área cargada (opcional)
             
         Returns:
-            str: Contenido de la respuesta
+            Dict: Misión generada o None si falla
         """
+        try:
+            # Preparar información del área
+            area_info, center_coords = self._prepare_area_info(area_name)
+            
+            # Crear prompts
+            system_prompt = self._build_system_prompt()
+            user_prompt = self._build_user_prompt(natural_command, area_info)
+            
+            # Obtener respuesta del LLM
+            response_content = self._create_chat_completion([
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ], temperature=0.3)
+            
+            # Procesar y enriquecer la misión
+            mission_data = self._process_mission_response(
+                response_content, natural_command, area_name, center_coords
+            )
+            
+            # Guardar misión
+            self._save_mission(mission_data)
+            
+            self.current_mission = mission_data
+            logger.info(f"Misión creada: {mission_data['mission_name']}")
+            return mission_data
+            
+        except Exception as e:
+            logger.error(f"Error creando misión: {e}")
+            return None
+    
+    def _create_chat_completion(self, messages: List[ChatCompletionMessageParam], 
+                              temperature: Optional[float] = None) -> str:
+        """Crea completion de chat usando el proveedor configurado."""
         temp = temperature if temperature is not None else self.config["temperature"]
         
         try:
             if self.provider == "docker":
-                # Para Docker Models, usar el modelo configurado
-                response = self.client.chat.completions.create(
-                    model=self.config["model"],
-                    messages=messages,
-                    temperature=temp,
-                    max_tokens=self.config["max_tokens"],
-                    timeout=self.config.get("timeout", 60)
-                )
+                response = self._create_docker_completion(messages, temp)
             elif self.provider == "openai":
-                # Para OpenAI, usar el modelo configurado
-                response = self.client.chat.completions.create(
-                    model=self.config["model"],
-                    messages=messages,
-                    temperature=temp,
-                    max_tokens=self.config["max_tokens"]
-                )
+                response = self._create_openai_completion(messages, temp)
             
-            return response.choices[0].message.content
+            content = response.choices[0].message.content
+            return content if content else ""
             
         except Exception as e:
-            logger.error(f"Error en {self.provider} chat completion: {e}")
+            logger.error(f"Error en {self.provider} completion: {e}")
             raise
+    
+    def _create_docker_completion(self, messages: List[ChatCompletionMessageParam], 
+                                temperature: float):
+        """Crea completion usando Docker Models."""
+        return self.client.chat.completions.create(
+            model=self.config["model"],
+            messages=messages,
+            temperature=temperature,
+            max_tokens=self.config["max_tokens"],
+            timeout=self.config.get("timeout", 60)
+        )
+    
+    def _create_openai_completion(self, messages: List[ChatCompletionMessageParam], 
+                                temperature: float):
+        """Crea completion usando OpenAI API."""
+        return self.client.chat.completions.create(
+            model=self.config["model"],
+            messages=messages,
+            temperature=temperature,
+            max_tokens=self.config["max_tokens"]
+        )
     
     def load_cartography(self, file_path: str, area_name: str) -> bool:
         """
-        Carga cartografía desde archivo (GeoJSON, KML, etc.).
+        Carga cartografía desde archivo.
         
         Args:
             file_path: Ruta al archivo de cartografía
@@ -183,21 +160,71 @@ class LLMMissionPlanner:
             bool: True si se cargó correctamente
         """
         try:
-            if file_path.endswith('.geojson') or file_path.endswith('.json'):
-                with open(file_path, 'r') as f:
-                    geo_data = geojson.load(f)
-                
-                # Extraer información del GeoJSON
-                area = self._process_geojson(geo_data, area_name)
-                self.loaded_areas[area_name] = area
-                return True
-                
+            if file_path.endswith(('.geojson', '.json')):
+                return self._load_geojson_cartography(file_path, area_name)
             elif file_path.endswith('.kml'):
-                # Implementar parser KML si es necesario
-                pass
+                logger.warning("Soporte KML no implementado")
+                return False
                 
         except Exception as e:
-            print(f"Error cargando cartografía: {e}")
+            logger.error(f"Error cargando cartografía: {e}")
+            return False
+        
+        return False
+    
+    def _load_geojson_cartography(self, file_path: str, area_name: str) -> bool:
+        """Carga cartografía desde archivo GeoJSON."""
+        try:
+            logger.info(f"Cargando GeoJSON desde: {file_path}")
+            
+            # Verificar que el archivo existe
+            if not os.path.exists(file_path):
+                logger.error(f"Archivo no encontrado: {file_path}")
+                return False
+            
+            # Leer y parsear archivo JSON
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                logger.info(f"Archivo leído, tamaño: {len(content)} caracteres")
+                
+                # Verificar que no esté vacío
+                if not content.strip():
+                    logger.error("Archivo GeoJSON está vacío")
+                    return False
+                
+                # Parsear JSON
+                try:
+                    geo_data = json.loads(content)
+                    logger.info("JSON parseado correctamente")
+                except json.JSONDecodeError as json_error:
+                    logger.error(f"Error parseando JSON: {json_error}")
+                    logger.error(f"Contenido problemático (primeros 500 chars): {content[:500]}")
+                    return False
+            
+            # Validar estructura GeoJSON básica
+            if not isinstance(geo_data, dict):
+                logger.error("GeoJSON debe ser un objeto JSON")
+                return False
+            
+            if 'type' not in geo_data:
+                logger.error("GeoJSON debe tener un campo 'type'")
+                return False
+            
+            if geo_data.get('type') != 'FeatureCollection':
+                logger.warning(f"Tipo GeoJSON inesperado: {geo_data.get('type')}, esperado 'FeatureCollection'")
+            
+            # Procesar features
+            features = geo_data.get('features', [])
+            logger.info(f"Procesando {len(features)} features")
+            
+            area = self._process_geojson(geo_data, area_name)
+            self.loaded_areas[area_name] = area
+            
+            logger.info(f"Área '{area_name}' cargada exitosamente con {len(area.boundaries)} límites y {len(area.points_of_interest)} POIs")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error procesando GeoJSON: {e}", exc_info=True)
             return False
     
     def _process_geojson(self, geo_data: dict, area_name: str) -> MissionArea:
@@ -210,18 +237,10 @@ class LLMMissionPlanner:
             properties = feature.get('properties', {})
             
             if geometry.get('type') == 'Polygon':
-                # Extraer perímetro
-                coords = geometry.get('coordinates', [[]])[0]
-                boundaries = [(lat, lng) for lng, lat in coords]
-                
+                boundaries = self._extract_polygon_boundaries(geometry)
             elif geometry.get('type') == 'Point':
-                # Punto de interés
-                coords = geometry.get('coordinates', [0, 0])
-                points_of_interest.append({
-                    'name': properties.get('name', 'POI'),
-                    'coordinates': (coords[1], coords[0]),  # lat, lng
-                    'type': properties.get('type', 'general')
-                })
+                poi = self._extract_point_of_interest(geometry, properties)
+                points_of_interest.append(poi)
         
         return MissionArea(
             name=area_name,
@@ -229,228 +248,151 @@ class LLMMissionPlanner:
             points_of_interest=points_of_interest
         )
     
+    def _extract_polygon_boundaries(self, geometry: Dict) -> List[Tuple[float, float]]:
+        """Extrae perímetro de un polígono."""
+        coords = geometry.get('coordinates', [[]])[0]
+        return [(lat, lng) for lng, lat in coords]
+    
+    def _extract_point_of_interest(self, geometry: Dict, 
+                                 properties: Dict) -> Dict:
+        """Extrae punto de interés."""
+        coords = geometry.get('coordinates', [0, 0])
+        return {
+            'name': properties.get('name', 'POI'),
+            'coordinates': (coords[1], coords[0]),  # lat, lng
+            'type': properties.get('type', 'general')
+        }
+    
     def get_area_center_coordinates(self, area_name: str) -> Optional[Tuple[float, float]]:
-        """
-        Obtiene las coordenadas del centro de un área cargada.
-        
-        Args:
-            area_name: Nombre del área
-            
-        Returns:
-            Tuple[float, float]: (latitud, longitud) del centro o None si no existe
-        """
+        """Obtiene las coordenadas del centro de un área cargada."""
         if area_name not in self.loaded_areas:
             return None
             
         area = self.loaded_areas[area_name]
-        
-        if not area.boundaries:
-            # Si no hay boundaries, usar el primer POI
-            if area.points_of_interest:
-                return area.points_of_interest[0]['coordinates']
-            return None
-        
-        # Calcular centro de los boundaries
-        lats = [coord[0] for coord in area.boundaries]
-        lngs = [coord[1] for coord in area.boundaries]
-        
-        center_lat = sum(lats) / len(lats)
-        center_lng = sum(lngs) / len(lngs)
-        
-        return (center_lat, center_lng)
+        return calculate_area_center(area)
     
-    def create_mission_from_command(self, natural_command: str, area_name: str = None) -> Dict:
-        """
-        Crea una misión a partir de un comando en lenguaje natural.
+    def _prepare_area_info(self, area_name: Optional[str]) -> Tuple[str, Optional[Tuple[float, float]]]:
+        """Prepara la información del área para la generación de misión."""
+        area_info = ""
+        center_coordinates = None
         
-        Args:
-            natural_command: Comando en lenguaje natural
-            area_name: Nombre del área cargada (opcional)
+        if area_name and area_name in self.loaded_areas:
+            area = self.loaded_areas[area_name]
+            center_coordinates = self.get_area_center_coordinates(area_name)
             
-        Returns:
-            Dict: Misión generada
-        """
-        try:
-            # Obtener información del área si está disponible
-            area_info = ""
-            center_coordinates = None
-            
-            if area_name and area_name in self.loaded_areas:
-                area = self.loaded_areas[area_name]
-                center_coordinates = self.get_area_center_coordinates(area_name)
-                
-                if center_coordinates:
-                    area_info = f"""
-                ÁREA GEOGRÁFICA ESPECÍFICA: {area.name}
-                
-                COORDENADAS DEL CENTRO: 
-                - Latitud: {center_coordinates[0]:.6f}
-                - Longitud: {center_coordinates[1]:.6f}
-                
-                LÍMITES DEL ÁREA: {area.boundaries}
-                
-                PUNTOS DE INTERÉS:
-                {area.points_of_interest}
-                
-                INSTRUCCIONES IMPORTANTES:
-                - TODOS los waypoints deben estar dentro o cerca de estas coordenadas específicas
-                - USA las coordenadas del centro como punto de referencia principal
-                - NO uses coordenadas genéricas o de otras ubicaciones
-                - Genera waypoints en un radio máximo de 2km desde el centro
-                """
-            
-            # Prompt optimizado para modelos locales (más directo y claro)
-            system_prompt = """
-            Eres un experto piloto de drones militar con conocimientos avanzados en planificación de misiones.
-            Tu tarea es convertir comandos en lenguaje natural en misiones de vuelo específicas.
-            
-            REGLAS CRÍTICAS PARA COORDENADAS:
-            1. Si se proporciona un área geográfica específica, DEBES usar exclusivamente esas coordenadas
-            2. NUNCA uses coordenadas genéricas como Madrid (40.416775, -3.703790)
-            3. Los waypoints deben estar dentro del área especificada
-            4. Usa las coordenadas del centro como referencia principal
-            5. Genera waypoints realistas para la zona geográfica indicada
-            
-            REGLAS CRÍTICAS PARA WAYPOINTS:
-            1. CADA waypoint DEBE tener coordenadas GPS DIFERENTES y ÚNICAS
-            2. Los waypoints deben estar GEOGRÁFICAMENTE DISTRIBUIDOS (mínimo 50-100 metros entre cada uno)
-            3. Si el comando menciona "waypoint 1, 2, 3" debes crear una RUTA con puntos intermedios diferentes
-            4. NUNCA repitas las mismas coordenadas exactas en múltiples waypoints
-            5. Crea una ruta lógica con puntos progresivos hacia el destino
-            
-            EJEMPLOS DE WAYPOINTS CORRECTOS:
-            - Waypoint 1: lat: 40.416775, lng: -3.703790
-            - Waypoint 2: lat: 40.417200, lng: -3.702500 (100m al noreste)  
-            - Waypoint 3: lat: 40.417800, lng: -3.703200 (150m al norte)
-            
-            EJEMPLOS DE WAYPOINTS INCORRECTOS (NO HAGAS ESTO):
-            - Todos los waypoints con las mismas coordenadas exactas
-            
-            Debes generar waypoints con coordenadas GPS precisas, altitudes apropiadas y acciones específicas.
-            Considera factores como seguridad, eficiencia de combustible, cobertura del área y objetivos tácticos.
-            
-            Responde ÚNICAMENTE con un JSON válido con esta estructura exacta:
-            {
-                "mission_name": "string",
-                "description": "string", 
-                "estimated_duration": number,
-                "waypoints": [
-                    {
-                        "latitude": number,
-                        "longitude": number,
-                        "altitude": number,
-                        "action": "string",
-                        "duration": number,
-                        "description": "string"
-                    }
-                ],
-                "safety_considerations": ["string"],
-                "success_criteria": ["string"],
-                "area_used": "string"
-            }
-            
-            Acciones disponibles: navigate, hover, scan, photograph, patrol, land, takeoff, search, monitor
-            """
-            
-            user_prompt = f"""
-            Comando: {natural_command}
-            
-            {area_info if area_info else "ÁREA: No se especificó área geográfica - usa coordenadas genéricas apropiadas"}
-            
-            Genera una misión detallada para este comando usando las coordenadas específicas del área.
-            """
-            
-            # Usar el método unificado para crear chat completion
-            response_content = self._create_chat_completion([
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ], temperature=0.3)
-            
-            # Parsear respuesta JSON
-            mission_data = extract_json_from_response(response_content)
-            
-            # Añadir metadatos
-            mission_data['id'] = str(uuid.uuid4())
-            mission_data['created_at'] = datetime.now().isoformat()
-            mission_data['status'] = 'planned'
-            mission_data['area_name'] = area_name
-            mission_data['original_command'] = natural_command
-            mission_data['llm_provider'] = self.provider
-            mission_data['llm_model'] = self.config["model"]
-            
-            # Añadir coordenadas del centro si están disponibles
             if center_coordinates:
-                mission_data['area_center'] = {
-                    'latitude': center_coordinates[0],
-                    'longitude': center_coordinates[1]
-                }
-            
-            # Guardar misión
-            mission_file = os.path.join(self.missions_dir, f"mission_{mission_data['id']}.json")
-            with open(mission_file, 'w') as f:
-                json.dump(mission_data, f, indent=2)
-            
-            self.current_mission = mission_data
-            logger.info(f"Misión creada exitosamente con {self.provider}: {mission_data['mission_name']}")
-            return mission_data
-            
-        except Exception as e:
-            logger.error(f"Error creando misión con {self.provider}: {e}")
-            return None
-    
-    def adaptive_mission_control(self, current_position: Tuple[float, float], 
-                               situation_report: str, mission_id: str) -> Dict:
-        """
-        Control adaptativo de misión usando LLM para tomar decisiones en tiempo real.
+                area_info = self._format_area_info(area, center_coordinates)
         
-        Args:
-            current_position: Posición actual del dron (lat, lng)
-            situation_report: Reporte de situación actual
-            mission_id: ID de la misión actual
-            
-        Returns:
-            Dict: Decisiones y modificaciones a la misión
+        return area_info, center_coordinates
+    
+    def _format_area_info(self, area: MissionArea, 
+                         center_coordinates: Tuple[float, float]) -> str:
+        """Formatea la información del área para el prompt."""
+        return f"""
+        ÁREA GEOGRÁFICA ESPECÍFICA: {area.name}
+        
+        COORDENADAS DEL CENTRO: 
+        - Latitud: {center_coordinates[0]:.6f}
+        - Longitud: {center_coordinates[1]:.6f}
+        
+        LÍMITES DEL ÁREA: {area.boundaries}
+        
+        PUNTOS DE INTERÉS: {area.points_of_interest}
+        
+        INSTRUCCIONES:
+        - Usar coordenadas específicas del área
+        - Generar waypoints dentro del área
+        - Radio máximo: 2km desde el centro
         """
-        try:
-            # Cargar misión actual
-            mission_file = os.path.join(self.missions_dir, f"mission_{mission_id}.json")
-            with open(mission_file, 'r') as f:
-                mission = json.load(f)
-            
-            system_prompt = """
-            Eres un comandante de drones con capacidad de tomar decisiones tácticas en tiempo real.
-            Basándote en la situación actual y la misión original, debes decidir si continuar, 
-            modificar la ruta, cambiar prioridades o abortar la misión.
-            
-            Responde con JSON válido:
-            {
-                "decision": "continue|modify|abort|investigate",
-                "reasoning": "string",
-                "new_waypoints": [],
-                "priority_change": "string",
-                "immediate_action": "string"
+    
+    def _build_system_prompt(self) -> str:
+        """Construye el prompt de sistema para generación de misiones."""
+        return """
+        Eres un experto en planificación de misiones de drones militares.
+        Convierte comandos naturales en misiones de vuelo estructuradas.
+        
+        REGLAS CRÍTICAS:
+        1. Usar coordenadas específicas del área si se proporciona
+        2. Cada waypoint debe tener coordenadas GPS únicas
+        3. Distribuir waypoints geográficamente (min 50-100m)
+        4. Crear rutas lógicas con puntos progresivos
+        5. Nunca repetir coordenadas exactas
+        
+        Responde ÚNICAMENTE con JSON válido:
+        {
+            "mission_name": "string",
+            "description": "string", 
+            "estimated_duration": number,
+            "waypoints": [
+                {
+                    "latitude": number,
+                    "longitude": number,
+                    "altitude": number,
+                    "action": "string",
+                    "duration": number,
+                    "description": "string"
+                }
+            ],
+            "safety_considerations": ["string"],
+            "success_criteria": ["string"],
+            "area_used": "string"
+        }
+        
+        Acciones: navigate, hover, scan, photograph, patrol, land, takeoff
+        """
+    
+    def _build_user_prompt(self, natural_command: str, area_info: str) -> str:
+        """Construye el prompt del usuario para generación de misiones."""
+        area_context = (area_info if area_info else 
+                       "ÁREA: No especificada - usar coordenadas apropiadas")
+        
+        return f"""
+        Comando: {natural_command}
+        
+        {area_context}
+        
+        Genera una misión detallada para este comando.
+        """
+    
+    def _process_mission_response(self, response_content: str, 
+                                natural_command: str, 
+                                area_name: Optional[str], 
+                                center_coordinates: Optional[Tuple[float, float]]) -> Dict:
+        """Procesa la respuesta del LLM y enriquece la misión."""
+        # Parsear respuesta JSON
+        mission_data = extract_json_from_response(response_content)
+        
+        # Añadir metadatos
+        self._add_metadata(mission_data, natural_command, area_name)
+        
+        # Añadir coordenadas del centro si están disponibles
+        if center_coordinates:
+            mission_data['area_center'] = {
+                'latitude': center_coordinates[0],
+                'longitude': center_coordinates[1]
             }
-            """
-            
-            user_prompt = f"""
-            Posición actual: {current_position}
-            Situación: {situation_report}
-            Misión original: {mission['mission_name']} - {mission['description']}
-            Waypoints restantes: {mission['waypoints']}
-            
-            ¿Qué decisión tomas?
-            """
-            
-            response_content = self._create_chat_completion([
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ], temperature=0.2)
-            
-            return extract_json_from_response(response_content)
-            
-        except Exception as e:
-            logger.error(f"Error en control adaptativo con {self.provider}: {e}")
-            return {"decision": "continue", "reasoning": "Error en análisis"}
+        
+        return mission_data
+    
+    def _add_metadata(self, mission_data: Dict, natural_command: str, 
+                     area_name: Optional[str]) -> None:
+        """Añade metadatos básicos a la misión."""
+        mission_data['id'] = str(uuid.uuid4())
+        mission_data['created_at'] = datetime.now().isoformat()
+        mission_data['status'] = 'planned'
+        mission_data['area_name'] = area_name
+        mission_data['original_command'] = natural_command
+        mission_data['llm_provider'] = self.provider
+        mission_data['llm_model'] = self.config["model"]
+    
+    def _save_mission(self, mission_data: Dict) -> None:
+        """Guarda la misión en archivo JSON."""
+        mission_file = os.path.join(
+            self.missions_dir, 
+            f"mission_{mission_data['id']}.json"
+        )
+        with open(mission_file, 'w', encoding='utf-8') as f:
+            json.dump(mission_data, f, indent=2, ensure_ascii=False)
     
     def get_available_missions(self) -> List[Dict]:
         """Obtiene lista de misiones disponibles."""
@@ -459,52 +401,33 @@ class LLMMissionPlanner:
         for filename in os.listdir(self.missions_dir):
             if filename.startswith('mission_') and filename.endswith('.json'):
                 try:
-                    with open(os.path.join(self.missions_dir, filename), 'r') as f:
-                        mission = json.load(f)
-                        missions.append({
-                            'id': mission['id'],
-                            'name': mission['mission_name'],
-                            'description': mission['description'],
-                            'status': mission.get('status', 'planned'),
-                            'created_at': mission['created_at']
-                        })
+                    mission_info = self._load_mission_info(filename)
+                    if mission_info:
+                        missions.append(mission_info)
                 except Exception as e:
-                    print(f"Error cargando misión {filename}: {e}")
+                    logger.error(f"Error cargando misión {filename}: {e}")
         
         return missions
     
-    def calculate_distance(self, point1: Tuple[float, float], 
-                          point2: Tuple[float, float]) -> float:
-        """Calcula distancia entre dos puntos GPS en metros."""
-        lat1, lon1 = math.radians(point1[0]), math.radians(point1[1])
-        lat2, lon2 = math.radians(point2[0]), math.radians(point2[1])
-        
-        dlat = lat2 - lat1
-        dlon = lon2 - lon1
-        
-        a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
-        c = 2 * math.asin(math.sqrt(a))
-        r = 6371000  # Radio de la Tierra en metros
-        
-        return c * r
+    def _load_mission_info(self, filename: str) -> Optional[Dict]:
+        """Carga información básica de una misión."""
+        try:
+            with open(os.path.join(self.missions_dir, filename), 
+                     'r', encoding='utf-8') as f:
+                mission = json.load(f)
+                return {
+                    'id': mission['id'],
+                    'name': mission['mission_name'],
+                    'description': mission['description'],
+                    'status': mission.get('status', 'planned'),
+                    'created_at': mission['created_at']
+                }
+        except Exception:
+            return None
     
-    def validate_mission_safety(self, mission: Dict) -> List[str]:
-        """Valida la seguridad de una misión."""
-        warnings = []
-        
-        for i, waypoint in enumerate(mission.get('waypoints', [])):
-            # Verificar altitud
-            if waypoint['altitude'] > 120:  # Límite legal en muchos países
-                warnings.append(f"Waypoint {i+1}: Altitud excede límite legal (120m)")
-            
-            # Verificar distancia entre waypoints
-            if i > 0:
-                prev_wp = mission['waypoints'][i-1]
-                distance = self.calculate_distance(
-                    (prev_wp['latitude'], prev_wp['longitude']),
-                    (waypoint['latitude'], waypoint['longitude'])
-                )
-                if distance > 10000:  # 10km
-                    warnings.append(f"Waypoint {i+1}: Distancia muy larga ({distance/1000:.1f}km)")
-        
-        return warnings 
+    def validate_mission(self, mission: Dict) -> List[str]:
+        """
+        Valida la seguridad de una misión.
+        Delegada al módulo de validación.
+        """
+        return validate_mission_safety(mission) 

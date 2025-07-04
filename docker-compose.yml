@@ -6,8 +6,8 @@ services:
     container_name: drone-geo-analysis
     volumes:
       - ./:/app
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-your_openai_key_here}
+    env_file:
+      - .env
     ports:
       - "4001:5000"
     restart: unless-stopped

@@ -4,7 +4,7 @@ FROM python:3.9-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install system dependencies for OpenCV and geo analysis only
+# Install system dependencies for OpenCV, PyTorch and YOLO 11
 RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
     libsm6 \
@@ -14,24 +14,24 @@ RUN apt-get update && apt-get install -y \
     libgstreamer1.0-0 \
     libgstreamer-plugins-base1.0-0 \
     libfontconfig1 \
+    libgomp1 \
+    curl \
+    wget \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
 
-# Install Python dependencies directly
-RUN pip install --no-cache-dir \
-    flask==2.3.3 \
-    openai==1.40.0 \
-    httpx==0.25.0 \
-    python-dotenv==1.0.0 \
-    requests==2.31.0 \
-    Pillow==9.5.0 \
-    waitress==2.1.2 \
-    opencv-python-headless==4.8.0.74 \
-    numpy==1.24.3 \
-    geojson==3.0.1
+# Copy requirements file first for better Docker layer caching
+COPY requirements.txt .
+
+# Install Python dependencies from requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Create ultralytics cache directory - model will be downloaded at runtime
+RUN mkdir -p /root/.cache/ultralytics
 
 # Create application directory structure (will be mounted from host)
 RUN mkdir -p logs results missions

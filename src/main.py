@@ -16,10 +16,12 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Importar módulos internos
 from src.models.geo_analyzer import GeoAnalyzer
+from src.models.yolo_detector import YoloObjectDetector
 from src.models.mission_planner import LLMMissionPlanner
 from src.models.geo_manager import GeolocationManager
 from src.utils.config import setup_logging
 from src.services import DroneService, MissionService, AnalysisService, GeoService
+from src.services.chat_service import ChatService
 from src.controllers import (
     drone_blueprint, mission_blueprint, 
     analysis_blueprint, geo_blueprint
@@ -90,6 +92,7 @@ class DroneGeoApp:
         
         # Configuración básica
         app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB máximo
+        app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
         
         return app
     
@@ -102,8 +105,12 @@ class DroneGeoApp:
         
         # Inicializar modelos principales
         analyzer = GeoAnalyzer()
+        yolo_detector = YoloObjectDetector()
         mission_planner = LLMMissionPlanner()
         geo_manager = GeolocationManager()
+        
+        # Inicializar servicio de chat
+        chat_service = ChatService()
         
         # Inicializar controladores de hardware
         hardware_components = self._initialize_hardware_components()
@@ -118,12 +125,13 @@ class DroneGeoApp:
                 mission_planner,
                 hardware_components['drone_controller']
             ),
-            'analysis': AnalysisService(analyzer),
+            'analysis': AnalysisService(analyzer, yolo_detector),
             'geo': GeoService(
                 geo_manager,
                 hardware_components['geo_triangulation'],
                 hardware_components['geo_correlator']
-            )
+            ),
+            'chat': chat_service
         }
         
         logger.info(f"Servicios inicializados: {list(self.services.keys())}")
@@ -207,7 +215,7 @@ class DroneGeoApp:
         # Inicializar controladores con sus servicios
         init_drone_controller(self.services['drone'])
         init_mission_controller(self.services['mission'])
-        init_analysis_controller(self.services['analysis'])
+        init_analysis_controller(self.services['analysis'], self.services['chat'])
         init_geo_controller(self.services['geo'])
         
         # Registrar blueprints

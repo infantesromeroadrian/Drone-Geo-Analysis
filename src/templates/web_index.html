@@ -504,6 +504,275 @@
                 opacity: 1;
             }
         }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Chat Section Styles */
+        .chat-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            margin-top: 2rem;
+            padding: 0;
+            overflow: hidden;
+            display: none; /* Hidden by default */
+        }
+
+        .chat-header {
+            background: var(--gradient-primary);
+            color: white;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-header h3 {
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chat-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            background: #10B981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .chat-container {
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            background: var(--bg-input);
+        }
+
+        .chat-message {
+            margin-bottom: 1rem;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .chat-message.user {
+            text-align: right;
+        }
+
+        .chat-message.assistant {
+            text-align: left;
+        }
+
+        .message-bubble {
+            display: inline-block;
+            max-width: 80%;
+            padding: 0.75rem 1rem;
+            border-radius: 16px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .message-bubble.user {
+            background: var(--accent);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-bubble.assistant {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .chat-input-area {
+            padding: 1rem;
+            background: var(--bg-card);
+            border-top: 1px solid var(--border);
+        }
+
+        .suggested-questions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .suggested-question {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            padding: 0.5rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .suggested-question:hover {
+            background: rgba(59, 130, 246, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .chat-input-form {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 25px;
+            padding: 0.75rem 1rem;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .chat-send-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .chat-send-btn:hover {
+            background: var(--accent-light);
+            transform: scale(1.05);
+        }
+
+        .chat-send-btn:disabled {
+            background: var(--border);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .chat-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .chat-control-btn {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.8rem;
+        }
+
+        .chat-control-btn:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .chat-welcome {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        .chat-welcome i {
+            font-size: 2rem;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .chat-loading {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-muted);
+        }
+
+        .chat-loading .spinner {
+            width: 16px;
+            height: 16px;
+            border-width: 2px;
+        }
+
+        /* Enhanced result container */
+        .analysis-enhancement {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .analysis-enhancement h4 {
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .yolo-context-summary {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .context-badge {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .object-tag {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent);
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+            display: inline-block;
+        }
+
+        .confidence-high { background: rgba(16, 185, 129, 0.1); color: #10B981; }
+        .confidence-medium { background: rgba(245, 158, 11, 0.1); color: #F59E0B; }
+        .confidence-low { background: rgba(239, 68, 68, 0.1); color: #EF4444; }
     </style>
 </head>
 <body>
@@ -557,7 +826,14 @@
             <div class="control-group">
                 <button class="btn btn-full" id="analyze-btn" disabled>
                     <i class="fas fa-brain"></i>
-                    Analyze with AI
+                    Analyze Location with AI
+                </button>
+            </div>
+
+            <div class="control-group">
+                <button class="btn btn-full" id="analyze-yolo-btn" disabled style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                    <i class="fas fa-eye"></i>
+                    Detect Objects with YOLO 11
                 </button>
             </div>
 
@@ -608,6 +884,61 @@
                     </p>
                 </div>
             </div>
+
+            <!-- Chat Contextual -->
+            <div class="chat-section" id="chat-section">
+                <div class="chat-header">
+                    <h3>
+                        <i class="fas fa-comments"></i>
+                        Chat Contextual
+                    </h3>
+                    <div class="chat-status">
+                        <div class="status-indicator"></div>
+                        Conectado
+                    </div>
+                </div>
+                
+                <div class="chat-container">
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="chat-welcome">
+                            <i class="fas fa-robot"></i>
+                            <p><strong>¡Hola!</strong> Ya analicé tu imagen.</p>
+                            <p>Puedo responder preguntas sobre lo que vi usando YOLO + GPT-4 Vision.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-input-area">
+                        <div class="chat-controls">
+                            <button class="chat-control-btn" id="suggested-btn" title="Preguntas sugeridas">
+                                <i class="fas fa-lightbulb"></i>
+                            </button>
+                            <button class="chat-control-btn" id="clear-chat-btn" title="Limpiar chat">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            <button class="chat-control-btn" id="history-btn" title="Ver historial">
+                                <i class="fas fa-history"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="suggested-questions" id="suggested-questions">
+                            <!-- Las preguntas sugeridas se cargarán aquí -->
+                        </div>
+                        
+                        <form class="chat-input-form" id="chat-form">
+                            <input 
+                                type="text" 
+                                class="chat-input" 
+                                id="chat-input" 
+                                placeholder="Pregunta sobre lo que viste en la imagen..."
+                                disabled
+                            >
+                            <button type="submit" class="chat-send-btn" id="chat-send-btn" disabled>
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -627,11 +958,26 @@
             const fileButton = document.getElementById('file-button');
             const previewContainer = document.getElementById('preview-container');
             const analyzeBtn = document.getElementById('analyze-btn');
+            const analyzeYoloBtn = document.getElementById('analyze-yolo-btn');
             const resultContainer = document.getElementById('result-container');
             const loader = document.getElementById('loader');
             const imageName = document.getElementById('image-name');
             const imageSize = document.getElementById('image-size');
             const imageDimensions = document.getElementById('image-dimensions');
+
+            // Chat elements
+            const chatSection = document.getElementById('chat-section');
+            const chatMessages = document.getElementById('chat-messages');
+            const chatInput = document.getElementById('chat-input');
+            const chatSendBtn = document.getElementById('chat-send-btn');
+            const chatForm = document.getElementById('chat-form');
+            const suggestedQuestions = document.getElementById('suggested-questions');
+            const suggestedBtn = document.getElementById('suggested-btn');
+            const clearChatBtn = document.getElementById('clear-chat-btn');
+            
+            // Chat state
+            let currentSessionId = null;
+            let chatHistory = [];
 
             // File input handling
             fileButton.addEventListener('click', () => imageInput.click());
@@ -685,8 +1031,9 @@
                 };
                 reader.readAsDataURL(file);
 
-                // Enable analyze button
+                // Enable analyze buttons
                 analyzeBtn.disabled = false;
+                analyzeYoloBtn.disabled = false;
             }
 
             // Analysis handling
@@ -717,7 +1064,12 @@
                         return;
                     }
                     
-                    displayResults(data.results);
+                    displayLocationResults(data);
+                    
+                    // Inicializar chat si hay session_id
+                    if (data.session_id) {
+                        initializeChat(data.session_id);
+                    }
                 })
                 .catch(error => {
                     loader.style.display = 'none';
@@ -725,88 +1077,260 @@
                 });
             });
 
-            function displayResults(results) {
+            // YOLO Analysis handling
+            analyzeYoloBtn.addEventListener('click', function() {
+                const file = imageInput.files[0];
+                if (!file) return;
+
+                // Show loader with YOLO message
+                loader.style.display = 'block';
+                loader.innerHTML = `
+                    <div class="spinner"></div>
+                    <p>Detecting objects with YOLO 11...</p>
+                `;
+                resultContainer.classList.add('empty');
+                resultContainer.innerHTML = '<p>Processing image with YOLO 11...</p>';
+                
+                // Prepare form data with YOLO parameters
+                const formData = new FormData();
+                formData.append('image', file);
+                formData.append('yolo_confidence', '0.5');
+                formData.append('nms_threshold', '0.4');
+
+                // Send request to YOLO endpoint
+                fetch('/analyze_yolo', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    loader.style.display = 'none';
+                    // Reset loader content
+                    loader.innerHTML = `
+                        <div class="spinner"></div>
+                        <p>Analyzing image with GPT-4 Vision...</p>
+                    `;
+                    
+                    if (data.error) {
+                        // Special handling for YOLO installation errors
+                        if (data.results && data.results.installation_required) {
+                            showYoloInstallationError(data.results);
+                        } else {
+                            showError(data.error);
+                        }
+                        return;
+                    }
+                    
+                    displayYoloResults(data.results);
+                })
+                .catch(error => {
+                    loader.style.display = 'none';
+                    // Reset loader content
+                    loader.innerHTML = `
+                        <div class="spinner"></div>
+                        <p>Analyzing image with GPT-4 Vision...</p>
+                    `;
+                    showError(`Connection error: ${error.message}`);
+                });
+            });
+
+            function displayLocationResults(result) {
+                const resultsContainer = document.getElementById('result-container');
+                const results = result.results;
+                
+                // Verificar si es análisis híbrido (con YOLO)
+                const isHybridAnalysis = results.analysis_type === 'hybrid_geographic_with_object_detection';
+                const yoloContext = results.yolo_detected_objects || {};
+                
+                resultsContainer.innerHTML = `
+                    <div class="results-container">
+                        <h3>🌍 Geographic Analysis Results ${isHybridAnalysis ? '(Enhanced with YOLO)' : ''}</h3>
+                        
+                        ${isHybridAnalysis ? `
+                        <div class="analysis-enhancement">
+                            <h4>🤖 AI Enhancement</h4>
+                            <p><strong>This analysis is enhanced with YOLO object detection for improved accuracy!</strong></p>
+                            <div class="yolo-context-summary">
+                                <span class="context-badge">
+                                    📊 ${yoloContext.total_objects || 0} objects detected
+                                </span>
+                                ${Object.keys(yoloContext.object_summary || {}).length > 0 ? `
+                                <span class="context-badge">
+                                    🏷️ ${Object.keys(yoloContext.object_summary).length} categories
+                                </span>
+                                ` : ''}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        <div class="location-details">
+                            <div class="location-item">
+                                <strong>🏴 Country:</strong> <span class="location-value">${results.country || 'Not determined'}</span>
+                            </div>
+                            <div class="location-item">
+                                <strong>🏙️ City:</strong> <span class="location-value">${results.city || 'Not determined'}</span>
+                            </div>
+                            <div class="location-item">
+                                <strong>🗺️ District:</strong> <span class="location-value">${results.district || 'Not determined'}</span>
+                            </div>
+                            <div class="location-item">
+                                <strong>🏘️ Neighborhood:</strong> <span class="location-value">${results.neighborhood || 'Not determined'}</span>
+                            </div>
+                            <div class="location-item">
+                                <strong>🛣️ Street:</strong> <span class="location-value">${results.street || 'Not determined'}</span>
+                            </div>
+                            ${results.coordinates ? `
+                            <div class="location-item">
+                                <strong>📍 Coordinates:</strong> 
+                                <span class="location-value">
+                                    ${results.coordinates.latitude?.toFixed(6) || 'N/A'}, 
+                                    ${results.coordinates.longitude?.toFixed(6) || 'N/A'}
+                                </span>
+                            </div>
+                            ` : ''}
+                            <div class="location-item">
+                                <strong>🎯 Confidence:</strong> 
+                                <span class="confidence-badge confidence-${getConfidenceLevel(results.confidence || 0)}">
+                                    ${results.confidence || 0}%
+                                </span>
+                            </div>
+                        </div>
+                        
+                        ${results.supporting_evidence && results.supporting_evidence.length > 0 ? `
+                        <div class="evidence-section">
+                            <h4>🔍 Supporting Evidence</h4>
+                            <ul class="evidence-list">
+                                ${results.supporting_evidence.map(evidence => `<li>${evidence}</li>`).join('')}
+                            </ul>
+                        </div>
+                        ` : ''}
+                        
+                        ${isHybridAnalysis && yoloContext.object_summary ? `
+                        <div class="yolo-details">
+                            <h4>🎯 Objects Detected (YOLO Context)</h4>
+                            <div class="object-summary">
+                                ${Object.entries(yoloContext.object_summary).map(([obj, count]) => `
+                                    <span class="object-tag">${obj}: ${count}</span>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${results.possible_alternatives && results.possible_alternatives.length > 0 ? `
+                        <div class="alternatives-section">
+                            <h4>🤔 Alternative Possibilities</h4>
+                            <div class="alternatives-list">
+                                ${results.possible_alternatives.map(alt => `
+                                    <div class="alternative-item">
+                                        <span class="alt-location">${alt.country}${alt.city ? ', ' + alt.city : ''}</span>
+                                        <span class="alt-confidence">${alt.confidence || 0}%</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${results.error ? `
+                        <div class="error-section">
+                            <h4>⚠️ Error</h4>
+                            <p class="error-message">${results.error}</p>
+                        </div>
+                        ` : ''}
+                        
+                        <div class="analysis-info">
+                            <p><strong>Analysis Type:</strong> ${isHybridAnalysis ? 'Hybrid (GPT-4 Vision + YOLO 11)' : 'GPT-4 Vision Only'}</p>
+                            <p><strong>File saved:</strong> ${result.saved_path || 'Not saved'}</p>
+                        </div>
+                    </div>
+                `;
+                
+                resultsContainer.style.display = 'block';
+                resultsContainer.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            function displayYoloResults(results) {
                 resultContainer.classList.remove('empty');
                 
                 let html = `
                     <div class="result-item fade-in">
-                        <h3><i class="fas fa-map-marker-alt"></i> Location Analysis</h3>
+                        <h3><i class="fas fa-eye"></i> YOLO 11 Object Detection</h3>
                         <div class="location-grid">
                             <div class="location-item">
-                                <span class="location-label">Country:</span>
-                                <span class="location-value">${results.country || 'Not determined'}</span>
+                                <span class="location-label">Objects Detected:</span>
+                                <span class="location-value">${results.total_objects || 0}</span>
                             </div>
                             <div class="location-item">
-                                <span class="location-label">City:</span>
-                                <span class="location-value">${results.city || 'Not determined'}</span>
+                                <span class="location-label">Model Version:</span>
+                                <span class="location-value">${results.model_version || 'YOLO 11n'}</span>
                             </div>
                             <div class="location-item">
-                                <span class="location-label">District:</span>
-                                <span class="location-value">${results.district || 'Not determined'}</span>
-                            </div>
-                            <div class="location-item">
-                                <span class="location-label">Neighborhood:</span>
-                                <span class="location-value">${results.neighborhood || 'Not determined'}</span>
-                            </div>
-                            <div class="location-item">
-                                <span class="location-label">Street:</span>
-                                <span class="location-value">${results.street || 'Not determined'}</span>
-                            </div>
-                            <div class="location-item">
-                                <span class="location-label">Confidence:</span>
-                                <span class="confidence-badge">
-                                    <i class="fas fa-check-circle"></i>
-                                    ${results.confidence || 0}%
-                                </span>
+                                <span class="location-label">Confidence Threshold:</span>
+                                <span class="location-value">${Math.round((results.confidence_threshold || 0.5) * 100)}%</span>
                             </div>
                         </div>
                     </div>
                 `;
 
-                if (results.coordinates) {
+                // Show annotated image if available
+                if (results.annotated_image) {
                     html += `
                         <div class="result-item slide-up">
-                            <h3><i class="fas fa-crosshairs"></i> Coordinates</h3>
-                            <div class="location-grid">
-                                <div class="location-item">
-                                    <span class="location-label">Latitude:</span>
-                                    <span class="location-value" style="font-family: 'JetBrains Mono', monospace;">${results.coordinates.latitude || 'N/A'}</span>
-                                </div>
-                                <div class="location-item">
-                                    <span class="location-label">Longitude:</span>
-                                    <span class="location-value" style="font-family: 'JetBrains Mono', monospace;">${results.coordinates.longitude || 'N/A'}</span>
-                                </div>
+                            <h3><i class="fas fa-image"></i> Annotated Image</h3>
+                            <div style="text-align: center; margin: 1rem 0;">
+                                <img src="data:image/jpeg;base64,${results.annotated_image}" 
+                                     style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" 
+                                     alt="Annotated image with detected objects">
                             </div>
                         </div>
                     `;
                 }
 
-                if (results.supporting_evidence && results.supporting_evidence.length > 0) {
+                // Show detections list if available
+                if (results.detections && results.detections.length > 0) {
                     html += `
                         <div class="result-item slide-up">
-                            <h3><i class="fas fa-search"></i> Supporting Evidence</h3>
+                            <h3><i class="fas fa-list"></i> Detected Objects</h3>
                             <ul class="evidence-list">
                     `;
                     
-                    results.supporting_evidence.forEach(evidence => {
-                        html += `<li><i class="fas fa-check"></i>${evidence}</li>`;
+                    results.detections.forEach((detection, index) => {
+                        const confidence = Math.round(detection.confidence * 100);
+                        html += `
+                            <li>
+                                <i class="fas fa-search"></i>
+                                <div>
+                                    <strong>${detection.class_name}</strong> (${confidence}% confidence)
+                                    <br>
+                                    <small style="color: var(--text-muted);">
+                                        Area: ${detection.area_percentage}% of image | 
+                                        Position: (${detection.bbox.center_x}, ${detection.bbox.center_y})
+                                    </small>
+                                </div>
+                            </li>
+                        `;
                     });
                     
                     html += `</ul></div>`;
                 }
 
-                if (results.possible_alternatives && results.possible_alternatives.length > 0) {
+                // Show summary statistics
+                if (results.detections && results.detections.length > 0) {
+                    const classCounts = {};
+                    results.detections.forEach(det => {
+                        classCounts[det.class_name] = (classCounts[det.class_name] || 0) + 1;
+                    });
+
                     html += `
                         <div class="result-item slide-up">
-                            <h3><i class="fas fa-map"></i> Alternative Locations</h3>
+                            <h3><i class="fas fa-chart-pie"></i> Object Summary</h3>
                             <div class="location-grid">
                     `;
                     
-                    results.possible_alternatives.forEach((alt, index) => {
+                    Object.entries(classCounts).forEach(([className, count]) => {
                         html += `
                             <div class="location-item">
-                                <span class="location-label">Alternative ${index + 1}:</span>
-                                <span class="location-value">${alt.country || 'Unknown'}, ${alt.city || 'Unknown'} (${alt.confidence || 0}%)</span>
+                                <span class="location-label">${className}:</span>
+                                <span class="location-value">${count} detected</span>
                             </div>
                         `;
                     });
@@ -824,6 +1348,43 @@
                 `;
 
                 resultContainer.innerHTML = html;
+            }
+
+            function showYoloInstallationError(results) {
+                resultContainer.classList.remove('empty');
+                resultContainer.innerHTML = `
+                    <div class="result-item" style="text-align: center; color: var(--warning);">
+                        <i class="fas fa-download" style="font-size: 2rem; margin-bottom: 1rem; color: #f59e0b;"></i>
+                        <h3>YOLO 11 No Disponible</h3>
+                        <p>${results.error}</p>
+                        <div style="background: rgba(245, 158, 11, 0.1); padding: 1rem; border-radius: 8px; margin: 1rem 0; border-left: 4px solid #f59e0b;">
+                            <h4><i class="fas fa-terminal"></i> Comando de Instalación</h4>
+                            <code style="background: rgba(0,0,0,0.1); padding: 0.5rem; border-radius: 4px; display: block; margin: 0.5rem 0; font-family: monospace;">
+                                ${results.install_command}
+                            </code>
+                            <p style="font-size: 0.9rem; margin-top: 0.5rem;">
+                                Ejecuta este comando en el contenedor Docker para instalar YOLO 11.
+                            </p>
+                        </div>
+                        <div style="margin-top: 1rem;">
+                            <button class="btn" onclick="location.reload()" style="margin-right: 1rem;">
+                                <i class="fas fa-refresh"></i>
+                                Reintentar
+                            </button>
+                            <button class="btn" onclick="switchToLocationAnalysis()" style="background: var(--accent);">
+                                <i class="fas fa-brain"></i>
+                                Usar Análisis de Ubicación
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function switchToLocationAnalysis() {
+                // Clear results and click location analysis button
+                resultContainer.classList.add('empty');
+                resultContainer.innerHTML = '<p>Analyzing image with GPT-4 Vision...</p>';
+                analyzeBtn.click();
             }
 
             function showError(message) {
@@ -849,6 +1410,239 @@
                 const sizes = ['Bytes', 'KB', 'MB', 'GB'];
                 const i = Math.floor(Math.log(bytes) / Math.log(k));
                 return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            function getConfidenceLevel(confidence) {
+                if (confidence >= 90) return 'high';
+                if (confidence >= 70) return 'medium';
+                return 'low';
+            }
+
+            // === FUNCIONES DE CHAT CONTEXTUAL ===
+
+            function initializeChat(sessionId) {
+                currentSessionId = sessionId;
+                chatSection.style.display = 'block';
+                
+                // Habilitar inputs
+                chatInput.disabled = false;
+                chatSendBtn.disabled = false;
+                
+                // Limpiar welcome y mostrar estado listo
+                chatMessages.innerHTML = `
+                    <div class="chat-message assistant">
+                        <div class="message-bubble assistant">
+                            🤖 ¡Perfecto! Ya analicé tu imagen. Puedo responder preguntas específicas sobre:
+                            <br>• Los objetos que detectó YOLO
+                            <br>• El análisis geográfico realizado
+                            <br>• Detalles técnicos del análisis
+                            <br>• Comparaciones y explicaciones
+                        </div>
+                        <div class="message-time">${new Date().toLocaleTimeString()}</div>
+                    </div>
+                `;
+                
+                // Cargar preguntas sugeridas
+                loadSuggestedQuestions();
+                
+                // Configurar eventos del chat
+                setupChatEvents();
+                
+                // Scroll al chat
+                setTimeout(() => {
+                    chatSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 500);
+            }
+
+            function setupChatEvents() {
+                // Envío de mensajes
+                chatForm.addEventListener('submit', handleChatSubmit);
+                
+                // Preguntas sugeridas
+                suggestedBtn.addEventListener('click', loadSuggestedQuestions);
+                
+                // Limpiar chat
+                clearChatBtn.addEventListener('click', clearChat);
+                
+                // Enter para enviar
+                chatInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        chatForm.dispatchEvent(new Event('submit'));
+                    }
+                });
+            }
+
+            async function handleChatSubmit(e) {
+                e.preventDefault();
+                
+                const question = chatInput.value.trim();
+                if (!question || !currentSessionId) return;
+                
+                // Mostrar pregunta del usuario
+                addChatMessage(question, 'user');
+                
+                // Limpiar input y deshabilitar temporalmente
+                chatInput.value = '';
+                chatInput.disabled = true;
+                chatSendBtn.disabled = true;
+                
+                // Mostrar indicador de carga
+                showChatLoading();
+                
+                try {
+                    const response = await fetch('/chat/question', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            session_id: currentSessionId,
+                            question: question
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    // Remover indicador de carga
+                    removeChatLoading();
+                    
+                    if (data.error) {
+                        addChatMessage(`❌ Error: ${data.error}`, 'assistant');
+                    } else {
+                        addChatMessage(data.response, 'assistant');
+                        // Recargar preguntas sugeridas
+                        loadSuggestedQuestions();
+                    }
+                    
+                } catch (error) {
+                    removeChatLoading();
+                    addChatMessage(`❌ Error de conexión: ${error.message}`, 'assistant');
+                }
+                
+                // Reactivar input
+                chatInput.disabled = false;
+                chatSendBtn.disabled = false;
+                chatInput.focus();
+            }
+
+            function addChatMessage(content, sender) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `chat-message ${sender}`;
+                
+                const time = new Date().toLocaleTimeString();
+                
+                messageDiv.innerHTML = `
+                    <div class="message-bubble ${sender}">
+                        ${content}
+                    </div>
+                    <div class="message-time">${time}</div>
+                `;
+                
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                
+                // Agregar al historial
+                chatHistory.push({ content, sender, time });
+            }
+
+            function showChatLoading() {
+                const loadingDiv = document.createElement('div');
+                loadingDiv.className = 'chat-message assistant';
+                loadingDiv.id = 'chat-loading-message';
+                
+                loadingDiv.innerHTML = `
+                    <div class="message-bubble assistant">
+                        <div class="chat-loading">
+                            <div class="spinner"></div>
+                            Analizando tu pregunta...
+                        </div>
+                    </div>
+                `;
+                
+                chatMessages.appendChild(loadingDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            function removeChatLoading() {
+                const loadingMessage = document.getElementById('chat-loading-message');
+                if (loadingMessage) {
+                    loadingMessage.remove();
+                }
+            }
+
+            async function loadSuggestedQuestions() {
+                if (!currentSessionId) return;
+                
+                try {
+                    const response = await fetch(`/chat/suggested_questions?session_id=${currentSessionId}`);
+                    const data = await response.json();
+                    
+                    if (data.suggested_questions && data.suggested_questions.length > 0) {
+                        displaySuggestedQuestions(data.suggested_questions);
+                    }
+                } catch (error) {
+                    console.error('Error loading suggested questions:', error);
+                }
+            }
+
+            function displaySuggestedQuestions(questions) {
+                suggestedQuestions.innerHTML = '';
+                
+                questions.forEach(question => {
+                    const questionBtn = document.createElement('button');
+                    questionBtn.className = 'suggested-question';
+                    questionBtn.textContent = question;
+                    questionBtn.addEventListener('click', () => {
+                        chatInput.value = question;
+                        chatInput.focus();
+                        // Auto-enviar la pregunta sugerida
+                        setTimeout(() => {
+                            chatForm.dispatchEvent(new Event('submit'));
+                        }, 100);
+                    });
+                    
+                    suggestedQuestions.appendChild(questionBtn);
+                });
+                
+                // Mostrar/ocultar sección de preguntas sugeridas
+                suggestedQuestions.style.display = questions.length > 0 ? 'flex' : 'none';
+            }
+
+            async function clearChat() {
+                if (!currentSessionId || !confirm('¿Estás seguro de que quieres limpiar el historial del chat?')) {
+                    return;
+                }
+                
+                try {
+                    await fetch('/chat/clear_history', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            session_id: currentSessionId
+                        })
+                    });
+                    
+                    // Limpiar UI
+                    chatHistory = [];
+                    chatMessages.innerHTML = `
+                        <div class="chat-message assistant">
+                            <div class="message-bubble assistant">
+                                🧹 Historial limpiado. ¿Qué te gustaría saber sobre la imagen?
+                            </div>
+                            <div class="message-time">${new Date().toLocaleTimeString()}</div>
+                        </div>
+                    `;
+                    
+                    // Recargar preguntas sugeridas
+                    loadSuggestedQuestions();
+                    
+                } catch (error) {
+                    console.error('Error clearing chat:', error);
+                    addChatMessage(`❌ Error al limpiar el chat: ${error.message}`, 'assistant');
+                }
             }
         });
     </script>

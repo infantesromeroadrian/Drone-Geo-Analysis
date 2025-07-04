@@ -169,6 +169,7 @@ class GeoAnalyzer:
     def _build_user_prompt(self, metadata: Dict[str, Any]) -> str:
         """Construye el prompt del usuario para la API."""
         image_info = self._extract_image_metadata(metadata)
+        yolo_context = self._format_yolo_context(metadata.get('yolo_context', {}))
         json_format = self._get_response_format_template()
         
         return f"""
@@ -177,6 +178,16 @@ class GeoAnalyzer:
         vehículos y estructura urbana.
         
         {image_info}
+        
+        INFORMACIÓN ADICIONAL DE OBJETOS DETECTADOS:
+        {yolo_context}
+        
+        INSTRUCCIONES:
+        - Utiliza TANTO la imagen visual COMO la información de objetos detectados para tu análisis
+        - Los objetos detectados pueden darte pistas importantes sobre el tipo de ubicación
+        - Considera la combinación de objetos para inferir contexto geográfico
+        - Si detectas vehículos específicos, consideralos para determinar la región/país
+        - La presencia de ciertos elementos urbanos puede indicar nivel de desarrollo
         
         Por favor, presenta tus hallazgos en formato JSON con los siguientes campos:
         {json_format}
@@ -252,4 +263,109 @@ class GeoAnalyzer:
             "confidence": 0,
             "supporting_evidence": [],
             "raw_response": raw_content
-        } 
+        }
+    
+    def _format_yolo_context(self, yolo_context: Dict[str, Any]) -> str:
+        """
+        Formatea el contexto de YOLO para el prompt de GPT-4 Vision.
+        
+        Args:
+            yolo_context: Contexto de objetos detectados por YOLO
+            
+        Returns:
+            Texto formateado con información de objetos
+        """
+        if not yolo_context or "error" in yolo_context:
+            return "No hay información adicional de objetos detectados disponible."
+        
+        context_text = f"""
+🔍 ANÁLISIS DE OBJETOS DETECTADOS (YOLO 11):
+
+📊 RESUMEN GENERAL:
+- Total de objetos detectados: {yolo_context.get('total_objects', 0)}
+
+📋 OBJETOS POR CATEGORÍA:
+{self._format_object_summary(yolo_context.get('object_summary', {}))}
+
+⭐ OBJETOS PROMINENTES (alta confianza y área significativa):
+{self._format_prominent_objects(yolo_context.get('prominent_objects', []))}
+
+🗺️ INDICADORES GEOGRÁFICOS:
+{self._format_geographic_indicators(yolo_context.get('geographic_indicators', {}))}
+
+💡 CONTEXTO PARA ANÁLISIS GEOGRÁFICO:
+- Usa esta información para complementar tu análisis visual
+- Los vehículos pueden indicar región (tipos comunes en diferentes países)
+- Elementos urbanos sugieren nivel de desarrollo e infraestructura
+- Densidad de personas puede indicar tipo de área (comercial, residencial, turística)
+- Medios de transporte específicos pueden ser característicos de ciertas regiones
+        """
+        
+        return context_text.strip()
+    
+    def _format_object_summary(self, object_summary: Dict[str, int]) -> str:
+        """Formatea el resumen de objetos."""
+        if not object_summary:
+            return "- No hay objetos categorizados detectados"
+        
+        summary_lines = []
+        for obj_type, count in sorted(object_summary.items(), key=lambda x: x[1], reverse=True):
+            summary_lines.append(f"- {obj_type}: {count} detectado(s)")
+        
+        return "\n".join(summary_lines[:10])  # Top 10 categorías
+    
+    def _format_prominent_objects(self, prominent_objects: List[Dict[str, Any]]) -> str:
+        """Formatea los objetos prominentes."""
+        if not prominent_objects:
+            return "- No hay objetos prominentes detectados"
+        
+        prominent_lines = []
+        for obj in prominent_objects[:5]:  # Top 5
+            class_name = obj.get('class_name', 'unknown')
+            confidence = obj.get('confidence', 0)
+            area_percentage = obj.get('area_percentage', 0)
+            prominent_lines.append(
+                f"- {class_name}: {confidence:.1%} confianza, {area_percentage:.1f}% del área de la imagen"
+            )
+        
+        return "\n".join(prominent_lines)
+    
+    def _format_geographic_indicators(self, geographic_indicators: Dict[str, Any]) -> str:
+        """Formatea los indicadores geográficos."""
+        if not geographic_indicators:
+            return "- No hay indicadores geográficos específicos detectados"
+        
+        indicator_lines = []
+        
+        # Vehículos
+        vehicles = geographic_indicators.get('vehicles', [])
+        if vehicles:
+            vehicle_types = [v['type'] for v in vehicles]
+            indicator_lines.append(f"🚗 Vehículos: {', '.join(set(vehicle_types))}")
+        
+        # Elementos urbanos
+        urban_elements = geographic_indicators.get('urban_elements', [])
+        if urban_elements:
+            urban_types = [u['type'] for u in urban_elements]
+            indicator_lines.append(f"🏙️ Elementos urbanos: {', '.join(set(urban_types))}")
+        
+        # Personas
+        people_indicators = geographic_indicators.get('people_indicators', [])
+        if people_indicators:
+            people_count = len(people_indicators)
+            avg_confidence = sum(p['confidence'] for p in people_indicators) / len(people_indicators)
+            indicator_lines.append(f"👥 Personas: {people_count} detectadas (confianza promedio: {avg_confidence:.1%})")
+        
+        # Transporte
+        transportation = geographic_indicators.get('transportation', [])
+        if transportation:
+            transport_types = [t['type'] for t in transportation]
+            indicator_lines.append(f"🚲 Transporte: {', '.join(set(transport_types))}")
+        
+        # Elementos naturales
+        natural_elements = geographic_indicators.get('natural_elements', [])
+        if natural_elements:
+            natural_types = [n['type'] for n in natural_elements]
+            indicator_lines.append(f"🌿 Elementos naturales: {', '.join(set(natural_types))}")
+        
+        return "\n".join(indicator_lines) if indicator_lines else "- No hay indicadores geográficos específicos detectados" 

@@ -4,6 +4,7 @@ Refactorizado siguiendo principios de Single Responsibility.
 
 Este módulo proporciona funcionalidades de:
 - Análisis geográfico de imágenes usando GPT-4 Vision
+- Detección de objetos usando YOLO 11
 - Planificación inteligente de misiones con LLM
 - Procesamiento de comandos en lenguaje natural
 - Modelos de datos para misiones
@@ -13,6 +14,7 @@ Este módulo proporciona funcionalidades de:
 """
 
 from .geo_analyzer import GeoAnalyzer
+from .yolo_detector import YoloObjectDetector
 from .mission_planner import LLMMissionPlanner
 from .mission_models import Waypoint, MissionArea, MissionMetadata
 from .mission_parser import extract_json_from_response
@@ -21,7 +23,8 @@ from .mission_utils import calculate_distance, calculate_area_center
 from .geo_manager import GeolocationManager
 
 __all__ = [
-    'GeoAnalyzer', 
+    'GeoAnalyzer',
+    'YoloObjectDetector',
     'LLMMissionPlanner',
     'Waypoint', 
     'MissionArea', 

@@ -53,11 +53,16 @@ def analyze():
             analysis_results = result.get('results', {})
             yolo_results = analysis_results.get('yolo_detected_objects', {})
             
+            # Obtener la imagen codificada para análisis visual específico
+            encoded_image, image_format = _get_encoded_image_for_chat(image_file)
+            
             chat_service.store_analysis_context(
                 session_id=session_id,
                 analysis_results=analysis_results,
                 yolo_results=yolo_results,
-                image_filename=image_file.filename
+                image_filename=image_file.filename,
+                encoded_image=encoded_image,
+                image_format=image_format
             )
             
             # Añadir session_id al resultado para el frontend
@@ -284,4 +289,51 @@ def _extract_yolo_params(form_data) -> Dict[str, Any]:
         'confidence_threshold': float(form_data.get('yolo_confidence', 0.5)),
         'nms_threshold': float(form_data.get('nms_threshold', 0.4)),
         'model_version': form_data.get('yolo_model', 'yolo11n')
-    } 
+    }
+
+def _get_encoded_image_for_chat(image_file) -> tuple:
+    """
+    Codifica la imagen para análisis visual específico en el chat.
+    
+    Args:
+        image_file: Archivo de imagen Flask
+        
+    Returns:
+        Tupla con (imagen_codificada, formato)
+    """
+    try:
+        import base64
+        import os
+        from PIL import Image
+        
+        # Resetear el puntero del archivo
+        image_file.seek(0)
+        
+        # Leer los datos de la imagen
+        image_data = image_file.read()
+        
+        # Codificar en base64
+        encoded_image = base64.b64encode(image_data).decode('utf-8')
+        
+        # Determinar formato de la imagen
+        filename = image_file.filename.lower()
+        if filename.endswith('.png'):
+            image_format = 'png'
+        elif filename.endswith('.gif'):
+            image_format = 'gif'
+        elif filename.endswith('.webp'):
+            image_format = 'webp'
+        else:
+            image_format = 'jpeg'  # Por defecto
+        
+        # Resetear el puntero del archivo para futuras operaciones
+        image_file.seek(0)
+        
+        logger.info(f"Imagen codificada para chat: {len(encoded_image)} bytes, formato: {image_format}")
+        return encoded_image, image_format
+        
+    except Exception as e:
+        logger.error(f"Error codificando imagen para chat: {str(e)}")
+        # Resetear el puntero del archivo en caso de error
+        image_file.seek(0)
+        return None, "jpeg"

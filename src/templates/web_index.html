@@ -554,7 +554,7 @@
         }
 
         .chat-container {
-            height: 400px;
+            height: 500px;
             display: flex;
             flex-direction: column;
         }
@@ -564,6 +564,7 @@
             overflow-y: auto;
             padding: 1rem;
             background: var(--bg-input);
+            min-height: 0;
         }
 
         .chat-message {
@@ -608,27 +609,32 @@
         }
 
         .chat-input-area {
-            padding: 1rem;
+            padding: 0.75rem 1rem;
             background: var(--bg-card);
             border-top: 1px solid var(--border);
+            flex-shrink: 0;
         }
 
         .suggested-questions {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
+            gap: 0.4rem;
+            margin-bottom: 0.75rem;
+            max-height: 80px;
+            overflow-y: auto;
         }
 
         .suggested-question {
             background: rgba(59, 130, 246, 0.1);
             color: var(--accent);
             border: 1px solid rgba(59, 130, 246, 0.3);
-            padding: 0.5rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
+            padding: 0.4rem 0.6rem;
+            border-radius: 15px;
+            font-size: 0.75rem;
             cursor: pointer;
             transition: all 0.3s ease;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .suggested-question:hover {
@@ -685,8 +691,8 @@
 
         .chat-controls {
             display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
+            gap: 0.4rem;
+            margin-bottom: 0.75rem;
         }
 
         .chat-control-btn {
@@ -773,6 +779,42 @@
         .confidence-high { background: rgba(16, 185, 129, 0.1); color: #10B981; }
         .confidence-medium { background: rgba(245, 158, 11, 0.1); color: #F59E0B; }
         .confidence-low { background: rgba(239, 68, 68, 0.1); color: #EF4444; }
+
+        /* Scroll personalizado para preguntas sugeridas */
+        .suggested-questions::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .suggested-questions::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .suggested-questions::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 2px;
+        }
+
+        .suggested-questions::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
+
+        /* Mejorar el scroll en mensajes de chat */
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: var(--bg-input);
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
     </style>
 </head>
 <body>

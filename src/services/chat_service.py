@@ -28,7 +28,8 @@ class ChatService:
         logger.info("Servicio de chat contextual inicializado")
     
     def store_analysis_context(self, session_id: str, analysis_results: Dict[str, Any], 
-                             yolo_results: Dict[str, Any], image_filename: str) -> None:
+                             yolo_results: Dict[str, Any], image_filename: str, 
+                             encoded_image: str = None, image_format: str = "jpeg") -> None:
         """
         Almacena el contexto de un análisis para futuras consultas.
         
@@ -37,12 +38,16 @@ class ChatService:
             analysis_results: Resultados del análisis geográfico
             yolo_results: Resultados de detección YOLO
             image_filename: Nombre del archivo de imagen
+            encoded_image: Imagen codificada en base64 para análisis visual específico
+            image_format: Formato de la imagen (jpeg, png, etc.)
         """
         self.context_storage[session_id] = {
             "timestamp": datetime.now().isoformat(),
             "image_filename": image_filename,
             "geographic_analysis": analysis_results,
             "yolo_detection": yolo_results,
+            "encoded_image": encoded_image,
+            "image_format": image_format,
             "chat_history": []
         }
         logger.info(f"Contexto almacenado para sesión: {session_id}")
@@ -69,7 +74,12 @@ class ChatService:
             
             context = self.context_storage[session_id]
             
-            # Construir prompt contextual
+            # Detectar si es una pregunta visual específica
+            if self._is_visual_question(question) and context.get("encoded_image"):
+                logger.info(f"Pregunta visual detectada: {question}")
+                return self._handle_visual_question(session_id, question, context)
+            
+            # Construir prompt contextual para preguntas estándar
             system_prompt = self._build_chat_system_prompt(context)
             user_prompt = self._build_chat_user_prompt(question, context)
             
@@ -268,8 +278,199 @@ class ChatService:
             suggestions.append(f"¿Cómo determinaste que era {geo_analysis.get('country', 'este país')}?")
             suggestions.append(f"¿Qué nivel de confianza tienes en el análisis?")
         
+        # Preguntas visuales específicas (solo si hay imagen codificada)
+        if context.get("encoded_image"):
+            top_objects = list(yolo_detection.get("object_summary", {}).keys())
+            if top_objects:
+                # Preguntas sobre colores de objetos específicos
+                suggestions.append(f"¿De qué color son los {top_objects[0]} en la imagen?")
+                suggestions.append(f"¿Cómo es el aspecto de los {top_objects[0]}?")
+            
+            # Preguntas visuales generales
+            suggestions.append("¿Qué colores predominan en la imagen?")
+            suggestions.append("¿Puedes describir el estado de los objetos visibles?")
+        
         # Preguntas sobre la combinación
         suggestions.append("¿Cómo te ayudó YOLO a mejorar el análisis geográfico?")
         suggestions.append("¿Qué elementos fueron más importantes para la identificación?")
         
-        return suggestions[:6]  # Máximo 6 sugerencias 
+        return suggestions[:6]  # Máximo 6 sugerencias
+    
+    def _is_visual_question(self, question: str) -> bool:
+        """
+        Detecta si una pregunta requiere análisis visual específico.
+        
+        Args:
+            question: Pregunta del usuario
+            
+        Returns:
+            True si requiere análisis visual específico
+        """
+        visual_keywords = [
+            # Colores
+            'color', 'colores', 'qué color', 'de qué color', 'rojo', 'azul', 'verde', 
+            'amarillo', 'negro', 'blanco', 'gris', 'naranja', 'rosa', 'morado', 'violeta',
+            
+            # Formas y características físicas
+            'forma', 'formas', 'aspecto', 'apariencia', 'tamaño', 'grande', 'pequeño',
+            'alto', 'bajo', 'ancho', 'estrecho', 'redondo', 'cuadrado', 'rectangular',
+            
+            # Detalles específicos
+            'detalle', 'detalles', 'específico', 'exacto', 'preciso', 'describe',
+            'cómo se ve', 'cómo es', 'qué tal', 'marca', 'modelo', 'tipo',
+            
+            # Características visuales
+            'brillo', 'luminoso', 'oscuro', 'claro', 'opaco', 'transparente',
+            'textura', 'superficie', 'material', 'acabado', 'estado',
+            
+            # Patrones y elementos
+            'patrón', 'diseño', 'estilo', 'rayado', 'liso', 'rugoso',
+            'nuevo', 'viejo', 'antiguo', 'moderno', 'deteriorado'
+        ]
+        
+        question_lower = question.lower()
+        return any(keyword in question_lower for keyword in visual_keywords)
+    
+    def _handle_visual_question(self, session_id: str, question: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Maneja preguntas que requieren análisis visual específico.
+        
+        Args:
+            session_id: ID de la sesión
+            question: Pregunta del usuario
+            context: Contexto de la sesión
+            
+        Returns:
+            Respuesta del análisis visual específico
+        """
+        try:
+            # Construir prompt para análisis visual específico
+            visual_prompt = self._build_visual_analysis_prompt(question, context)
+            
+            # Crear mensaje para GPT-4 Vision
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": visual_prompt
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/{context['image_format']};base64,{context['encoded_image']}"
+                            }
+                        }
+                    ]
+                }
+            ]
+            
+            # Llamar a GPT-4 Vision para análisis específico
+            response = self.client.chat.completions.create(
+                model=self.config["model"],
+                messages=messages,
+                temperature=0.3,
+                max_tokens=1000,
+            )
+            
+            # Extraer respuesta
+            answer = response.choices[0].message.content.strip()
+            
+            # Agregar información contextual
+            enhanced_answer = self._enhance_visual_response(answer, context)
+            
+            # Guardar en historial
+            context["chat_history"].append({
+                "question": question,
+                "response": enhanced_answer,
+                "timestamp": datetime.now().isoformat(),
+                "type": "visual_analysis"
+            })
+            
+            return {
+                "response": enhanced_answer,
+                "question": question,
+                "timestamp": datetime.now().isoformat(),
+                "status": "success",
+                "analysis_type": "visual_specific"
+            }
+            
+        except Exception as e:
+            logger.error(f"Error en análisis visual específico: {str(e)}")
+            return {
+                "error": str(e),
+                "response": "Lo siento, no pude analizar los detalles visuales específicos de la imagen.",
+                "status": "error"
+            }
+    
+    def _build_visual_analysis_prompt(self, question: str, context: Dict[str, Any]) -> str:
+        """
+        Construye un prompt específico para análisis visual.
+        
+        Args:
+            question: Pregunta del usuario
+            context: Contexto de la sesión
+            
+        Returns:
+            Prompt para análisis visual específico
+        """
+        geo_analysis = context["geographic_analysis"]
+        yolo_detection = context["yolo_detection"]
+        
+        return f"""
+        Eres un especialista en análisis visual de imágenes. Analiza esta imagen con detalle para responder la siguiente pregunta específica sobre características visuales.
+
+        PREGUNTA ESPECÍFICA: {question}
+
+        CONTEXTO DE LA IMAGEN:
+        - Archivo: {context["image_filename"]}
+        - Ubicación identificada: {geo_analysis.get("country", "No determinado")}, {geo_analysis.get("city", "No determinado")}
+        - Objetos detectados por YOLO: {json.dumps(yolo_detection.get("object_summary", {}), indent=2)}
+
+        INSTRUCCIONES PARA ANÁLISIS VISUAL:
+        1. Observa cuidadosamente la imagen para identificar características visuales específicas
+        2. Enfócate en colores, formas, texturas, materiales, estado y detalles específicos
+        3. Proporciona descripciones precisas y detalladas
+        4. Si identificas marcas, modelos o características específicas, menciónalas
+        5. Combina tu análisis visual con el contexto geográfico conocido
+        6. Sé específico con colores (no solo "azul", sino "azul oscuro", "azul cielo", etc.)
+        7. Describe el estado de los objetos (nuevo, usado, deteriorado, etc.)
+        8. Menciona cualquier detalle que sea relevante para la pregunta
+
+        IMPORTANTE:
+        - Responde únicamente basándote en lo que puedes ver claramente en la imagen
+        - Si no puedes determinar algo con certeza, dilo claramente
+        - Proporciona detalles específicos y precisos
+        - Usa terminología técnica apropiada cuando sea relevante
+
+        Responde la pregunta con el máximo detalle visual posible.
+        """
+    
+    def _enhance_visual_response(self, visual_response: str, context: Dict[str, Any]) -> str:
+        """
+        Mejora la respuesta visual con información contextual.
+        
+        Args:
+            visual_response: Respuesta del análisis visual
+            context: Contexto de la sesión
+            
+        Returns:
+            Respuesta mejorada con contexto
+        """
+        geo_analysis = context["geographic_analysis"]
+        
+        enhanced_response = f"""
+        {visual_response}
+
+        🔍 **Análisis Visual Específico Completado**
+
+        Esta información se basa en:
+        • **Análisis visual directo** de la imagen usando GPT-4 Vision
+        • **Contexto geográfico**: {geo_analysis.get('country', 'No determinado')}, {geo_analysis.get('city', 'No determinado')}
+        • **Objetos detectados**: {context['yolo_detection'].get('total_objects', 0)} objetos identificados
+
+        💡 *Tip*: Puedes hacer más preguntas específicas sobre colores, formas o características visuales de cualquier elemento en la imagen.
+        """
+        
+        return enhanced_response.strip()
